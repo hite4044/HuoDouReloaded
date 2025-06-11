@@ -1,36 +1,18 @@
 import hashlib
-import json
 from io import BytesIO
-from os import mkdir
-from os.path import abspath, isfile, join as path_join, expandvars, isdir
-from shutil import rmtree
+from os.path import abspath, isfile
+from typing import cast as type_cast, Any
 
 import pygame as pg
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from cairosvg import svg2png
 
+from engine.cache import mk_cache
 from lib.public_data import log_func
 
-RENDER_SCALE = 3
-re_render = False
-import ctypes
-
-ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("product")
-
 # 常量定义
-from lib.define import *
-
-
-def db(n: float):
-    if n > 255:
-        return 255
-    if n < 0:
-        return 0
-    return n
-
-
-def ms(n1: float, n2: float):
-    return round((n2 - n1) * 1000, 4)
+RENDER_SCALE = 3
+use_cache = True
 
 
 def surface2image(surface: pg.surface.Surface):
@@ -41,18 +23,18 @@ def surface2image(surface: pg.surface.Surface):
 def image2surface(image: Image.Image | str):
     if isinstance(image, Image.Image):
         image_bytes = image.tobytes()
-        # noinspection PyTypeChecker
-        return pg.image.frombuffer(image_bytes, (image.width, image.height), image.mode).convert_alpha()
+        return pg.image.frombuffer(image_bytes, (image.width, image.height), type_cast(Any, image.mode)).convert_alpha()
     return pg.image.load(image).convert_alpha()
 
 
-def render_svg2image(fp, scale: float = 1.5):
+def render_svg2image(fp, scale: float = 1.5) -> Image.Image:
+    log_func("Loading Assets:", fp)
     load_path = abspath(fp)
-    fp_hash = hashlib.sha1((fp if scale == 1.5 else fp + str(scale)).encode("utf-8")).hexdigest()
-    image_cache_fp = path_join(cache_path, f"{fp_hash}.png")
-    if not re_render:
+    asset_hash = hashlib.md5(f"{fp}{scale}".encode("utf-8")).hexdigest()
+    asset_cache_fp = mk_cache(f"{asset_hash}.png")
+    if use_cache:
         try:
-            image = Image.open(image_cache_fp)
+            image = Image.open(asset_cache_fp)
             return image
         except FileNotFoundError:
             pass
@@ -61,29 +43,28 @@ def render_svg2image(fp, scale: float = 1.5):
     log_func("Rendering Assets:", fp)
     image = Image.open(BytesIO(png_bytes))
     image = image.resize((int(image.width / RENDER_SCALE), int(image.height / RENDER_SCALE)))
-    image.save(image_cache_fp)
+    image.save(asset_cache_fp)
     return image
 
 
 def load_svg(fp: str, scale: float = 1.5):
     png_image = render_svg2image(fp, scale)
-    log_func("Loading Assets:", fp)
     return image2surface(png_image)
 
 
-def get_image_cover(_image: Image.Image, use_alpha: bool = True, cover_color=(0, 0, 0)):
-    image = _image.copy()
+def get_image_cover(raw_image: Image.Image, binary_alpha: bool = False, cover_color=(0, 0, 0)):
+    image = raw_image.copy()
 
     cover = Image.new("RGBA", image.size, cover_color + (0,))
-    if use_alpha:
-        cover.putalpha(image.split()[3])
-    else:
+    if binary_alpha:
         cover.putalpha(image.split()[3].point(lambda p: p > 0 and 255))
+    else:
+        cover.putalpha(image.split()[3])
 
     return cover
 
 
-def draw_text_outline(draw, text: str, font, loc,
+def draw_text_outline(draw, text: str, font, loc: tuple[int, int],
                       outline_width: int = 3, outline_color="#990000"):
     draw_text = lambda xy: draw.text(xy, text, font=font, fill=outline_color, anchor="mm")
     x, y = loc
@@ -123,7 +104,7 @@ def draw_outline_text(draw: ImageDraw.ImageDraw,
 
 
 class ImageRender:
-    def __init__(self, size: list[int] | tuple[int, int] = [50, 50],
+    def __init__(self, size: list[int] | tuple[int, int] = (50, 50),
                  base_image: pg.surface.Surface | Image.Image = None,
                  use_cache: bool = False):
         if base_image:
@@ -132,7 +113,7 @@ class ImageRender:
             self._base = base_image
         else:
             self._base = Image.new("RGBA", size, (255, 255, 255, 0))
-        self.do = {}
+        self.tasks = {}
         self.cache = use_cache
 
     def _add_image(self, image, loc: list[int] | tuple[int, int]):
@@ -142,7 +123,7 @@ class ImageRender:
 
     def add_image(self, image, loc: list[int] | tuple[int, int]):
         if self.cache:
-            self.do[self._add_image] = (image, loc)
+            self.tasks[self._add_image] = (image, loc)
         else:
             self._add_image(image, loc)
 
@@ -177,7 +158,7 @@ class ImageRender:
     def add_shadow(self, offset: int, blur_radius: float | list[float] = 3,
                    use_alpha: bool = True, cover_times: int = 1):
         if self.cache:
-            self.do[self._add_shadow] = (offset, blur_radius, use_alpha, cover_times)
+            self.tasks[self._add_shadow] = (offset, blur_radius, use_alpha, cover_times)
         else:
             self._add_shadow(offset, blur_radius, use_alpha, cover_times)
 
@@ -219,61 +200,36 @@ class ImageRender:
                  outline_blur: bool = False, blur_radius: float = 3,
                  spacing: int = 4):
         if self.cache:
-            self.do[self._add_text] = (text, font_size, image_size, text_color, outline, outline_width, outline_color,
-                                       faster_outline, text_loc, outline_blur, blur_radius, spacing)
+            self.tasks[self._add_text] = (text, font_size, image_size, text_color, outline, outline_width,
+                                          outline_color,
+                                          faster_outline, text_loc, outline_blur, blur_radius, spacing)
         else:
             self._add_text(text, font_size, image_size, text_color, outline, outline_width, outline_color,
                            faster_outline, text_loc, outline_blur, blur_radius, spacing)
 
     def calc_image(self):
-        for func, args in self.do.items():
+        for func, args in self.tasks.items():
             func(*args)
         return self._base
 
     @property
     def base(self) -> Image.Image:
         if self.cache:
-            do_hash = hashlib.sha1()
-            for args in self.do.values():
+            task_hash = hashlib.sha1()
+            for args in self.tasks.values():
                 for arg in args:
                     try:
-                        do_hash.update(str(hash(arg)).encode("utf-8"))
+                        task_hash.update(str(hash(arg)).encode("utf-8"))
                     except TypeError:
                         pass
-            image_path = path_join(cache_path, f"{do_hash.hexdigest()}.png")
-            if not isfile(image_path):
-                image = self.calc_image()
-                image.save(image_path)
+            image_cache_path = mk_cache(f"{task_hash.hexdigest()}.png")
+            if not isfile(image_cache_path):
+                image = Image.open(image_cache_path)
                 return image
-            image = Image.open(image_path)
-            return image
+            else:
+                image = self.calc_image()
+                image.save(image_cache_path)
+                return image
 
         else:
             return self._base
-
-
-# default
-cache_path = path_join(expandvars("%TEMP%"), "HuoDouReloadedTemp")
-if not isdir(cache_path):
-    mkdir(cache_path)
-
-
-def remove_assets():
-    if isdir(cache_path):
-        rmtree(cache_path)
-        mkdir(cache_path)
-
-
-info_fp = path_join(cache_path, "info.json")
-if isfile(info_fp):
-    try:
-        with open(info_fp) as f:
-            _data = json.load(f)
-            if _data["version"] != VERSION:
-                remove_assets()
-    except (OSError, json.JSONDecodeError):
-        remove_assets()
-else:
-    remove_assets()
-    with open(info_fp, "w+") as f:
-        json.dump({"version": VERSION}, f)

@@ -4,8 +4,8 @@ from typing import Union
 
 class Counter:
     def __init__(self, create_start: bool = False):
-        self.timers = {}
-        self.results = {}
+        self.timers: dict[str, float] = {}
+        self.results: dict[str, float] = {}
         self.local_timer = 0
         if create_start:
             self.start()

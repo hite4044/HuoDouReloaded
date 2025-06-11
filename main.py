@@ -1,19 +1,25 @@
-from os import getcwd, environ
-from os.path import join
 from time import perf_counter
 
+from lib.perf import Counter
+
+timer = Counter()  # 库导入计时器
+timer.start("lib", "all")
+
+from os import getcwd, environ
+from os.path import join
+
 environ["PATH"] += ";" + join(getcwd(), "base_library")
+from lib.public_data import sprites, layer_updates
 from sprites.base_sprite import BaseSprite
-
-
-timers = [perf_counter()]
-from copy import deepcopy
-import resource as rs
+from typing import cast as type_cast
+from copy import deepcopy, copy
+from engine import resource as rs
+from lib import public_data
 from tools import *
 
-timers.append(perf_counter())  # 库导入计时器
 pg.init()
 screen = pg.display.set_mode((1050, 750))
+public_data.screen = screen
 
 
 class VisualLogger(pg.sprite.Sprite):
@@ -95,19 +101,14 @@ logger = VisualLogger()
 players_count = 1
 left_player = 1
 level = "None"
-sound = True
-timers.append(perf_counter())  # 资源加载计时器
-rs.load_resources(logger.log)
-timers.append(perf_counter())  # 资源加载计时器
+sound = False
 pg.display.set_caption("火柴人吃豆豆2")
+timer.end("lib")
+timer.start("res")  # 资源加载计时
+public_data.internal_log_func = logger.log
+rs.load_resources()
+timer.end("res")  # 资源加载计时器
 pg.display.set_icon(rs.icon)
-sprites = {}
-for lay in LAYERS:
-    sprites[lay] = []
-layer_updates = []
-
-
-
 
 
 class FrameSprite(BaseSprite):
@@ -134,7 +135,7 @@ class FrameSprite(BaseSprite):
 
 class Shadow(BaseSprite):
     # noinspection PyShadowingNames
-    def __init__(self, sprite: BaseSprite, offset: int, radius: float = 3):
+    def __init__(self, sprite: BaseSprite, offset: int, radius: float = 2):
         self.parent = sprite
         self.offset = offset
         self.radius = radius
@@ -322,84 +323,67 @@ class StartButton(Button):
             self.show = data == TAKE_START
 
 
-class MoreGameButton(Button):
-    def __init__(self, loc):
-        self.now_cover = None
-        self.cover_offset = [0, 0]
-        super().__init__(loc)
+class CoverButton(Button):
+    def __init__(self):
+        super().__init__((0, 0))
+        self.active_cover = None
+        self.cover_offset: tuple[int, int] = (0, 0)
+        self.show = False
+        self.cover_map: dict[int, tuple[str, tuple[int, int]]] = {}
+
+    def event_parse(self, event: int, data):
+        if event == EVENT_TAKE_CHANGE:
+            if event != TAKE_PLAY:
+                self.show = False
+                self.active_cover = None
+        elif event == EVENT_LEVEL_END:
+            print("Level was end, load cover")
+            self.change_layer(LAYER_END_UI)
+            cover_path, self.cover_offset = self.cover_map[data]
+            self.active_cover = eval(cover_path)
+        elif event == EVENT_LEVEL_RESET:
+            print("Level Reset Del cover")
+            self.show = False
+            self.active_cover = None
+        elif event == EVENT_COVER_RUN:
+            if self.active_cover:
+                self.show = False
+                self.active_cover.statics.append(self)
+
+    def update(self):
+        if self.active_cover:
+            cover_loc = self.active_cover.rect.topleft
+            new_loc = (cover_loc[0] + self.cover_offset[0], cover_loc[1] + self.cover_offset[1])
+            self.loc = new_loc
+            self.rect.center = tuple(new_loc)
+            self.show = True
+        super().update()
+
+
+class MoreGameButton(CoverButton):
+    def __init__(self):
+        super().__init__()
         self.add_frame(rs.buttons.more_game.up)
         self.add_frame(rs.buttons.more_game.down)
         self.cover_map = {
             LEVEL_END_WIN: ("sm.win_cover", [521, 379]),
             LEVEL_END_LOSE: ("sm.lose_cover", [521, 379]),
         }
+        self.event_parse(EVENT_TAKE_CHANGE, TAKE_START)
 
     def event_parse(self, event: int, data):
         if event == EVENT_TAKE_CHANGE:
             self.change_layer(LAYER_UI)
-            self.now_cover = None
+            self.active_cover = None
             self.show = True
             if data == TAKE_START:
-                self.loc = [546, 450]
+                self.loc = (546, 450)
             elif data == TAKE_LEVEL_CHOOSE:
-                self.loc = [516, 698]
+                self.loc = (516, 698)
             else:
                 self.show = False
-        elif event == EVENT_LEVEL_RESET:
-            self.show = False
-            self.now_cover = None
-        elif event == EVENT_LEVEL_END:
-            self.change_layer(LAYER_END_UI)
-            self.now_cover, self.cover_offset = self.cover_map[data]
-            self.now_cover = eval(self.now_cover)
-
-    def update(self):
-        if self.now_cover:
-            new_loc = list(self.now_cover.rect.topleft)
-            new_loc[0] += self.cover_offset[0]
-            new_loc[1] += self.cover_offset[1]
-            self.loc = new_loc
-            self.rect.center = tuple(self.loc)
-            self.show = True
-        super().update()
-
-
-class CoverButton(Button):
-    def __init__(self):
-        super().__init__([0, 0])
-        self.now_cover = None
-        self.cover_offset = [0, 0]
-        self.show = False
-        self.cover_map = {}
-
-    def event_parse(self, event: int, data):
-        if event == EVENT_TAKE_CHANGE:
-            if event != TAKE_PLAY:
-                self.show = False
-                self.now_cover = None
-        elif event == EVENT_LEVEL_END:
-            print("Level was end, load cover")
-            self.change_layer(LAYER_END_UI)
-            self.now_cover, self.cover_offset = self.cover_map[data]
-            self.now_cover = eval(self.now_cover)
-        elif event == EVENT_LEVEL_RESET:
-            print("Level Reset Del cover")
-            self.show = False
-            self.now_cover = None
-        elif event == EVENT_COVER_RUN:
-            if self.now_cover:
-                self.show = False
-                self.now_cover.statics.append(self)
-
-    def update(self):
-        if self.now_cover:
-            new_loc = list(self.now_cover.rect.topleft)
-            new_loc[0] += self.cover_offset[0]
-            new_loc[1] += self.cover_offset[1]
-            self.loc = new_loc
-            self.rect.center = tuple(self.loc)
-            self.show = True
-        super().update()
+            return
+        super().event_parse(event, data)
 
 
 class ReturnChooseButton(CoverButton):
@@ -463,8 +447,8 @@ class MusicButton(Button):
         super().__init__(loc)
         self.add_frame(rs.buttons.music.up)
         self.add_frame(rs.buttons.music.down)
-        self.add_frame(rs.buttons.music.Aup)
-        self.add_frame(rs.buttons.music.Adown)
+        self.add_frame(rs.buttons.music.A_up)
+        self.add_frame(rs.buttons.music.A_down)
         self.music_opened = True
         self.pause_lock = False
         self.on_play = False
@@ -780,7 +764,7 @@ class CoverTitle(TextSprite):
     def __init__(self, text: str, font_size: float,
                  fill_color: str = "#FFCB00", outline_color: str = "#990000",
                  spacing: int = 20,
-                 end_msg: int = LEVEL_END_WIN, cover_offset: tuple[int, int] = [0, 0], cover: str = None):
+                 end_msg: int = LEVEL_END_WIN, cover_offset: tuple[int, int] = (0, 0), cover: str = None):
         super().__init__([0, 0], text, font_size, (300, 180), True,
                          fill_color=fill_color,
                          outline=True, outline_color=outline_color,
@@ -819,7 +803,7 @@ class CoverTitle(TextSprite):
             new_loc = list(self.cover.rect.topleft)
             new_loc[0] += self.cover_offset[0]
             new_loc[1] += self.cover_offset[1]
-            self.loc = new_loc
+            self.loc: tuple[int, int] = type_cast(tuple[int, int], tuple(new_loc))
             self.rect.topleft = tuple(self.loc)
         super().update()
 
@@ -989,9 +973,6 @@ class LevelElement(BaseSprite):
         sm.level_manager.elements.remove(self)
         super().kill()
 
-    def renew_loc(self, new_loc: list[int]):
-        self.rect.topleft = tuple(new_loc)
-
     def update(self):
         if self.show:
             if self.wait_action:
@@ -1020,11 +1001,10 @@ class LevelElement(BaseSprite):
                 self.drag_lock = False
 
             if self.drag_lock:
-                new_loc = list(pg.mouse.get_pos())
-                new_loc[0] += self.drag_offset[0]
-                new_loc[1] += self.drag_offset[1]
-                self.renew_loc(new_loc)
-                self.loc = new_loc
+                mouse_loc = pg.mouse.get_pos()
+                mouse_loc = (mouse_loc[0] + self.drag_offset[0], mouse_loc[1] + self.drag_offset[1])
+                self.rect.topleft = mouse_loc
+                self.loc = mouse_loc
         super().update()
 
 
@@ -1094,7 +1074,6 @@ class Gun(LevelElement):
             speed = self.speed + 1 - 1
         bombs = Bombs(new_loc, speed)
         sm.level_manager.temps.append(bombs)
-        # noinspection PyTypeChecker
         sm.level_manager.kills.add(bombs)
 
 
@@ -1103,12 +1082,9 @@ class Bombs(BaseSprite):
         self.layer_def = LAYER_PLAY
         super().__init__(rs.sprites.bombs.normal, loc)
         self.last_update = perf_counter()
-        self.self_group = pg.sprite.Group()
         self.speed = speed
         self.enable = True
         self.x = loc[0] + 1 - 1
-        # noinspection PyTypeChecker
-        self.self_group.add(self)
 
     def event_parse(self, event: int, data):
         if event == EVENT_LEVEL_END:
@@ -1127,7 +1103,7 @@ class Bombs(BaseSprite):
     def update(self):
         if perf_counter() - self.last_update > 1 / 40 and self.enable:
             self.x += self.speed
-            self.loc[0] = int(self.x)
+            self.loc = (int(self.x), self.loc[1])
             self.rect.topleft = tuple(self.loc)
             if self.collide:
                 self.kill()
@@ -1165,17 +1141,20 @@ class XKill(LevelElement):
                 self.frame_index = 0
             self.image = self.frames[self.frame_index]
 
-            new_loc = self.loc[:]
+            new_loc = self.loc
             if not self.dir:
-                new_loc[0] += self.speed
-                if new_loc[0] > self.stop:
-                    new_loc[0] = self.stop + 1 - 1
+                if new_loc[0] + self.speed > self.stop:
+                    new_loc = (self.stop, new_loc[1])
                     self.dir = 1
+                else:
+                    new_loc = (new_loc[0] + self.speed, new_loc[1])
+
             else:
-                new_loc[0] -= self.speed
-                if new_loc[0] < self.start:
-                    new_loc[0] = self.start + 1 - 1
+                if new_loc[0] - self.speed < self.start:
+                    new_loc = (self.start, new_loc[1])
                     self.dir = 0
+                else:
+                    new_loc = (new_loc[0] - self.speed, new_loc[1])
             self.loc = new_loc
 
             self.rect = self.image.get_rect()
@@ -1187,34 +1166,30 @@ class XKill(LevelElement):
 
 class BeanEatAnimation(FrameSprite):
     def __init__(self, loc):
-        self.layer_def = LAYER_PLAY
+        self.layer_def = LAYER_END_UI
         super().__init__(loc)
         self.frame_time = 1 / 20
-        self.start_loc = self.loc[:]
-        self.stop_loc = sm.bean_show.loc[:]
+        self.start_loc = tuple(self.loc)
+        self.stop_loc = tuple(sm.bean_show.loc)
         self.last_frame = perf_counter()
         self.now_frame_index = -1
         if sound:
             rs.sound.eat.play()
-        image = surface2image(rs.sprites.golden_bean.normal)
-        size_list = list(range(10, 1, -1)) + [1, 1, 1]
-        for size in size_list:
-            frame = image.resize(tuple(map(lambda x: int(x * size / len(size_list)), image.size)))
-            self.add_frame(image2surface(frame))
+        for frame in rs.sprites.golden_bean.eat_animation:
+            self.add_frame(frame)
 
     def event_parse(self, event: int, data):
         if event == EVENT_LEVEL_RESET:
             self.kill()
 
-    def get_inside_loc(self, percent: float):
-        new_loc = self.start_loc[:]
-        new_loc[0] += int((self.stop_loc[0] - self.start_loc[0]) * percent)
-        new_loc[1] += int((self.stop_loc[1] - self.start_loc[1]) * percent)
-        return new_loc
+    def get_move_animation_loc(self, percent: float):
+        delta_x = int((self.stop_loc[0] - self.start_loc[0]) * percent)
+        delta_y = int((self.stop_loc[1] - self.start_loc[1]) * percent)
+        return self.loc[0] + delta_x, self.loc[1] + delta_y
 
     def update(self):
         if perf_counter() - self.last_frame > self.frame_time:
-            self.loc = self.get_inside_loc(self.now_frame_index / len(self.frames))
+            self.loc = self.get_move_animation_loc(self.now_frame_index / len(self.frames))
             try:
                 self.switch_frame(self.now_frame_index + 1)
             except IndexError:
@@ -1255,7 +1230,7 @@ class BombBoomAnimation(FrameSprite):
 class Cover(BaseSprite):
     def __init__(self, image, msg):
         self.layer_def = LAYER_END_UI_BG
-        super().__init__(image, [0, 0])
+        super().__init__(image, (0, 0))
         self.show = False
         self.y_in_move = False
         self.statics = []
@@ -1277,7 +1252,7 @@ class Cover(BaseSprite):
             self.show = False
         elif event == EVENT_LEVEL_END:
             if data == self.msg:
-                self.loc = self.rect.topleft = [0, -750]
+                self.loc = self.rect.topleft = (0, -750)
                 self.show = True
                 self.y_in_move = True
                 self.last_update = perf_counter()
@@ -1288,11 +1263,12 @@ class Cover(BaseSprite):
     def update(self):
         if self.y_in_move and perf_counter() - self.last_update > 0.02:
             dy = self.target_y - self.loc[1]
-            self.loc[1] += int(dy / 11)
-            if self.loc[1] > self.stop_y:
-                self.loc[1] = self.stop_y + 1 - 1
+            delta_y = int(dy / 11)
+            if self.loc[1] + delta_y > self.stop_y:
+                self.loc = (self.loc[0], copy(self.stop_y))
                 self.y_in_move = False
-            self.rect.topleft = self.loc[:]
+            self.loc = (self.loc[0], self.loc[1] + delta_y)
+            self.rect.topleft = tuple(self.loc)
             self.last_update = perf_counter()
         if self.x_in_move and perf_counter() - self.last_update > 0.02:
             if not self.static_cover:
@@ -1303,13 +1279,14 @@ class Cover(BaseSprite):
                 self.static_cover = image2surface(image)
                 self.saved_cover = self.image.copy()
             dx = self.target_x - self.loc[0]
-            self.loc[0] += int(dx / 11)
-            self.rect.topleft = self.loc[:]
+            delta_x = int(dx / 11)
+            self.loc = (self.loc[0] + delta_x, self.loc[1])
+            self.rect.topleft = tuple(self.loc)
             self.static_cover.set_alpha(int(255 * (1050 - dx)))
             self.image = self.static_cover
             self.last_update = perf_counter()
             if self.loc[0] > self.stop_x:
-                self.loc[0] = self.stop_x + 1 - 1
+                self.loc = (copy(self.stop_x), self.loc[1])
                 self.x_in_move = False
                 self.image = self.saved_cover
                 sm.send_event(EVENT_LEVEL_NEXT, 0)
@@ -1340,7 +1317,9 @@ class AnimationSprite(FrameSprite):
         self.played_animation = None
         self.end_stop = False
         self.animation_index = 0
-        self.animation_time = 0
+        self.ani_frame_start = 0
+        self.ani_frame_count = 0
+        self.ani_frame_time = 0
         self.last_update = perf_counter()
 
     def add_animation(self, resources, name: str, speed: int = 10):
@@ -1352,9 +1331,9 @@ class AnimationSprite(FrameSprite):
     def play_animation(self, name: str, end_stop: bool = False):
         if name != self.played_animation:
             self.played_animation = name
-            self.animation_time = self.animations[self.played_animation][2]
+            self.ani_frame_start, self.ani_frame_count, self.ani_frame_time = self.animations[self.played_animation]
             self.animation_index = 0
-            self.last_update = 0
+            self.last_update = perf_counter() - self.ani_frame_time
             self.end_stop = end_stop
 
     def switch_frame(self, index: int):
@@ -1364,16 +1343,19 @@ class AnimationSprite(FrameSprite):
 
     def update(self):
         if self.show and self.played_animation and self.animation_index != -1:
-            if perf_counter() - self.last_update > self.animation_time:
-                self.switch_frame(self.animations[self.played_animation][0] + self.animation_index)
-                self.animation_index += 1
-                if self.animation_index >= self.animations[self.played_animation][1]:
+            if perf_counter() - self.last_update > self.ani_frame_time:
+                frame_delta = int((perf_counter() - self.last_update) // self.ani_frame_time)
+                self.switch_frame(self.ani_frame_start + self.animation_index)
+                self.animation_index += frame_delta
+                if self.played_animation.startswith("die"):
+                    print(frame_delta)
+                if self.animation_index >= self.ani_frame_count:
                     if self.end_stop:
                         self.animation_index = -1
                         self.show = False
                     else:
                         self.animation_index = 0
-                self.last_update = perf_counter()
+                self.last_update += frame_delta * self.ani_frame_time
         if not OLD_ANIMATION:
             self.rect = self.image.get_rect()
             self.rect.center = self.loc
@@ -1397,10 +1379,10 @@ class Player(AnimationSprite):
         super().__init__(loc)
         rs_player = rs_map[player_id]
         self.add_frame(rs_player.box)
-        self.add_animation(rs_player.stand, "stand", 24)
-        self.add_animation(rs_player.run, "run", 24)
+        self.add_animation(rs_player.stand, "stand", 12)
+        self.add_animation(rs_player.run, "run", 20)
         self.add_animation(rs_player.die, "die", 20)
-        self.add_animation(rs_player.jump, "jump", 20)
+        self.add_animation(rs_player.jump, "jump", 24)
 
         self.Vy = 0
         self.x = self.rect.topleft[0]
@@ -1433,7 +1415,7 @@ class Player(AnimationSprite):
             image = surface2image(resources.frames[i])
             image = image.resize((int(image.width * 1.18), int(image.height // 1.3)))
             right_frames.append(image2surface(image))
-            left_frames.append(image2surface(image.transpose(Image.FLIP_LEFT_RIGHT)))
+            left_frames.append(image2surface(image.transpose(Image.Transpose.FLIP_LEFT_RIGHT)))
         super().add_animation(right_frames, name + "_right", speed)
         super().add_animation(left_frames, name + "_left", speed)
 
@@ -1444,10 +1426,7 @@ class Player(AnimationSprite):
         self.x += x
         self.y -= y
 
-        top = list(self.rect.topleft)
-        top[0] = int(self.x)
-        top[1] = int(self.y)
-        self.rect.topleft = tuple(top)
+        self.rect.topleft = tuple((self.x, self.y))
 
         self.loc = self.rect.center
 
@@ -1535,6 +1514,8 @@ class Player(AnimationSprite):
 
             self.last_pos_update = perf_counter()
             self.rect = self.saved_rect.copy()
+        if self.played_animation.startswith("die"):
+            self.rect.topleft = self.rect.center
         super().update()
 
 
@@ -1672,10 +1653,10 @@ class SpritesManager:
         self.game_title = GameTitle([524, 114])
         self.player_choose_title = PlayersChooseTitle([540, 100])
         self.level_choose_title = LevelChooseTitle([538, 54])
+        self.more_game_button = MoreGameButton()
         self.win_cover_title = WinCoverTitle()
         self.lose_cover_title = LoseCoverTitle()
         self.start_button = StartButton([546, 321])
-        self.more_game_button = MoreGameButton([546, 450])
         self.music_button = MusicButton([50, 56])
         self.return_button = ReturnButton([733, 697])
 
@@ -1711,22 +1692,24 @@ class SpritesManager:
 
     @staticmethod
     def send_event(event_id: int, data):
+        print(f"EVENT {event_id}, {data}")
         for _sprites in list(sprites.values()):
             for sprite in _sprites:
                 sprite.event_parse(event_id, data)
 
 
-timers.append(perf_counter())  # 元素定义计时器
+timer.start("spr_create")  # 元素创建计时器
 logger.log("Creating Sprites...")
 sm = SpritesManager()
 logger.log("Sprites Creating Done!")
-timers.append(perf_counter())  # 元素创建计时器
+timer.end("spr_create")  # 元素创建计时器
+timer.end("all")
 
 logger.log("Game Loading Over!")
-logger.log(f"Library Load Use: {ms(timers[0], timers[1])} ms")
-logger.log(f"Resource Loading Use: {ms(timers[2], timers[3])} ms")
-logger.log(f"Sprites Create Use: {ms(timers[4], timers[5])} ms")
-logger.log(f"Game Launch Use: {ms(timers[0], timers[5])} ms")
+logger.log(f"Library Load Use: {timer.endT('lib')}")
+logger.log(f"Resource Loading Use: {timer.endT('res')}")
+logger.log(f"Sprites Create Use: {timer.endT('spr_create')}")
+logger.log(f"Game Launch Use: {timer.endT('all')}")
 
 logger.finish()
 logger.render_now()
@@ -1781,7 +1764,7 @@ while True:
             if SPRITE_PERF:
                 print("-" * 50)
                 _times = sorted(updates.keys())
-                for time in _times:
+                for time in _times[:min(20, len(_times))]:
                     _name = updates[time]
                     print("Max Update Time:", _name, time)
             print("FPS:", round(clock.get_fps(), 2))

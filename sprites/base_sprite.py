@@ -1,5 +1,13 @@
+from copy import copy
+from typing import cast as type_cast
+
 import pygame as pg
-import resource as rs
+
+from engine import resource as rs
+from lib import public_data
+from lib.define import *
+from lib.public_data import sprites, log_func, layer_updates
+
 
 
 class BaseSprite(pg.sprite.Sprite):
@@ -10,24 +18,24 @@ class BaseSprite(pg.sprite.Sprite):
 
         self.image: pg.surface.Surface = image
         self.rect: pg.rect.Rect = self.image.get_rect()
-        self.loc = loc
+        self.loc = type_cast(tuple[int, int], tuple(loc))
         self.show = True
         self.image_callback = lambda _: None
         self.get_update_image = lambda: self.image
 
-        self.rect.topleft = tuple(loc)
+        self.rect.topleft = type_cast(tuple[int, int], tuple(loc))
         if hasattr(self, "layer_def"):
             layer = self.layer_def
         else:
             layer = LAYER_COVER
         sprites[layer].append(self)
         self.layer_ = layer
-        logger.log(f"Creating Sprite {self.__class__.__name__} on {loc}", )
+        log_func(f"Creating Sprite {self.__class__.__name__} on {loc}", )
 
     def update_image(self, image: pg.surface.Surface):
         self.image = image
         self.rect: pg.rect.Rect = self.image.get_rect()
-        self.rect.topleft = self.loc[:]
+        self.rect.topleft = copy(self.loc)
         self.image_callback(image)
 
     def get_image(self):
@@ -43,8 +51,7 @@ class BaseSprite(pg.sprite.Sprite):
 
     def target(self, x: int, y: int):
         if ELE_EDIT:
-            self.loc[0] += x
-            self.loc[1] += y
+            self.loc = (self.loc[0] + x, self.loc[1] + y)
             self.rect.topleft = tuple(self.loc)
 
     def kill(self):
@@ -53,4 +60,4 @@ class BaseSprite(pg.sprite.Sprite):
 
     def update(self):
         if self.show:
-            screen.blit(self.image, self.rect.topleft)
+            public_data.screen.blit(self.image, self.rect.topleft)
