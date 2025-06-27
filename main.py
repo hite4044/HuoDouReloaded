@@ -1,6 +1,13 @@
+import json
+from ctypes import windll
 from time import perf_counter
 
 from lib.perf import Counter
+from sprites.base.button import Button, CoverButton
+from sprites.base.frame_sprite import FrameSprite
+from sprites.base.shadow import Shadow
+from sprites.base.text_sprite import OldTextSprite
+from sprites.titles import LevelChooseTitle, PlayersChooseTitle, GameTitle
 
 timer = Counter()  # 库导入计时器
 timer.start("lib", "all")
@@ -9,93 +16,17 @@ from os import getcwd, environ
 from os.path import join
 
 environ["PATH"] += ";" + join(getcwd(), "base_library")
-from lib.public_data import sprites, layer_updates
-from sprites.base_sprite import BaseSprite
-from typing import cast as type_cast
-from copy import deepcopy, copy
+from lib.public_data import public_data, sprites, layer_updates
+from sprites.visual_logger import VisualLogger
+from sprites.base.base_sprite import BaseSprite, Align, Vector2
+from copy import deepcopy
 from engine import resource as rs
-from lib import public_data
-from tools import *
+from engine.asset_parser import *
+from lib.define import *
 
 pg.init()
 screen = pg.display.set_mode((1050, 750))
 public_data.screen = screen
-
-
-class VisualLogger(pg.sprite.Sprite):
-    def __init__(self):
-        super().__init__()
-        self.image = rs.empty
-        self.last_render = perf_counter()
-        self.texts = []
-        self.text_images = []
-        self.texts_counter = 0
-        self.is_finish = False
-        self.ft = ImageFont.load_default(16)
-
-        self.start = perf_counter()
-        self.last_times = json.load(open("assets/data/load_times.json"))
-        self.times = []
-
-    def log(self, *values: object):
-        text = " ".join(map(str, values))
-        print(text)
-        if self.is_finish:
-            return
-        if LOADING_LOG:
-            self.texts.append(text)
-        if "Rendering" not in text:
-            self.times.append(perf_counter())
-            self.texts_counter += 1
-        self.render_image()
-
-    def render_image(self):
-        if perf_counter() - self.last_render > 1 / LOADING_FPS:
-            self.render_now()
-
-    def render_text(self, *text: str):
-        image = Image.new("RGB", (450, 20 * len(text)), (0, 0, 0))
-        draw = ImageDraw.Draw(image)
-        draw.text((0, 0), "\n".join(text), font=self.ft)
-        return image
-
-    def render_now(self):
-        self.text_images.append(self.render_text(*self.texts))
-        self.texts.clear()
-
-        image = Image.new("RGB", (1050, 750), (0, 0, 0))
-        offset = 670
-        for i in range(len(self.text_images)):
-            text = self.text_images[0 - i]
-            if offset < 0:
-                del self.text_images[:0 - i]
-                break
-            image.paste(text, (0, offset - text.height))
-            offset -= text.height
-
-        draw = ImageDraw.Draw(image)
-        try:
-            draw.rectangle((0, 720, 1050 * self.last_times[self.texts_counter], 750), fill="white")
-        except IndexError:
-            draw.rectangle((0, 720, 1050, 750), fill="white")
-        except ValueError:
-            pass
-
-        self.image = image2surface(image)
-        self.update()
-        self.last_render = perf_counter()
-
-    def finish(self):
-        times = [round((i - self.start) / (perf_counter() - self.start), 3) for i in self.times]
-        json.dump(times, open("assets/data/load_times.json", "w+"))
-        self.is_finish = True
-
-    def update(self):
-        pg.event.get()
-        screen.fill((0, 0, 0))
-        screen.blit(self.image, (0, 0))
-        pg.display.update()
-
 
 logger = VisualLogger()
 players_count = 1
@@ -103,82 +34,22 @@ left_player = 1
 level = "None"
 sound = False
 pg.display.set_caption("火柴人吃豆豆2")
-timer.end("lib")
-timer.start("res")  # 资源加载计时
-public_data.internal_log_func = logger.log
+timer.end_start("lib", "res")  # 资源加载计时
+public_data.set_log_fuc(logger.log)
 rs.load_resources()
 timer.end("res")  # 资源加载计时器
+public_data.set_log_fuc(print)
 pg.display.set_icon(rs.icon)
-
-
-class FrameSprite(BaseSprite):
-    def __init__(self, loc):
-        super().__init__(None, loc)
-        self.frames: list[pg.surface.Surface] = []
-        self.now_frame_index = None
-
-    def add_frame(self, frame):
-        self.frames.append(frame)
-        if len(self.frames) == 1:
-            self.switch_frame(0)
-            self.first_frame()
-        return len(self.frames) - 1
-
-    def first_frame(self):
-        pass
-
-    def switch_frame(self, index: int):
-        if index != self.now_frame_index:
-            self.now_frame_index = index
-            self.update_image(self.frames[index])
-
-
-class Shadow(BaseSprite):
-    # noinspection PyShadowingNames
-    def __init__(self, sprite: BaseSprite, offset: int, radius: float = 2):
-        self.parent = sprite
-        self.offset = offset
-        self.radius = radius
-        self.layer_def = sprite.layer_ - 1
-        super().__init__(self.make_cover(sprite.image, radius), self.pos().topleft)
-        self.cbk = sprite.image_callback
-        sprite.image_callback = self.image_update_callback
-        self.image_callback(sprite.get_image())
-
-    def image_update_callback(self, image: pg.surface.Surface):
-        self.cbk(image)
-        cover = self.make_cover(image, self.radius)
-        self.update_image(cover)
-
-    @staticmethod
-    def make_cover(surface: pg.surface.Surface, radius: float):
-        image = surface2image(surface)
-        cover = get_image_cover(image)
-        cover_new = Image.new("RGBA", [cover.width + 100, cover.height + 100], (0, 0, 0, 0))
-        cover_new.paste(cover, (50, 50))
-        blur_cover = cover_new.filter(ImageFilter.GaussianBlur(radius=radius))
-        return pg.image.frombytes(blur_cover.tobytes(), blur_cover.size, "RGBA").convert_alpha()
-
-    def update(self):
-        self.rect = self.pos()
-        self.show = self.parent.show
-        super().update()
-
-    def pos(self) -> pg.rect.Rect:
-        new_rect: pg.rect.Rect = self.parent.rect.copy()
-        new_rect = new_rect.move(-50, self.offset - 50)
-        return new_rect
+windll.user32.SetWindowPos(pg.display.get_wm_info()["window"], None, 365 - 7, 131, 0, 0, 0x0001 | 0x0004)
 
 
 class LevelEnter(FrameSprite):
-    def __init__(self, loc, _level: str, parent: BaseSprite = None):
+    def __init__(self, loc: tuple[int, int], _level: str, parent: BaseSprite = None):
         self.layer_def = LAYER_UI
-        loc[0] += parent.loc[0]
-        loc[1] += parent.loc[1]
-        super().__init__(loc)
+        super().__init__((loc[0] + parent.loc.x, loc[1] + parent.loc.y))
         self.level = _level
         self.add_frame(rs.sprites.level.lock)
-        render = ImageRender((60, 70))
+        render = OldImageRender((60, 70))
         render.add_text(str(_level), 50)
         render.add_shadow(8, [0.4, 2.5], False, 2)
         image = surface2image(rs.sprites.level.unlock)
@@ -230,9 +101,9 @@ class LevelsContainer(BaseSprite):
         for y in range(4):
             for x in range(6):
                 if y == 3:
-                    _level = LevelEnter([x * 143 - 5, y * 136], str(6 * y + x + 1), self)
+                    _level = LevelEnter((x * 143 - 5, y * 136), str(6 * y + x + 1), self)
                 else:
-                    _level = LevelEnter([x * 143, y * 138], str(6 * y + x + 1), self)
+                    _level = LevelEnter((x * 143, y * 138), str(6 * y + x + 1), self)
                 self.levels.append(_level)
 
     def unlock_level(self, level_name: str):
@@ -262,53 +133,6 @@ class BrownPlayerPose(BaseSprite):
             self.show = data == TAKE_LEVEL_CHOOSE
 
 
-class Button(FrameSprite):
-    def __init__(self, loc, shadow=True):
-        self.layer_def = LAYER_UI
-        super().__init__(loc)
-        self.rect.center = self.loc
-        self.shadow = shadow
-        self.press_lock = False
-        self.enable = True
-
-    def add_frame(self, frame):
-        if self.shadow:
-            render = ImageRender(frame.get_size(), frame)
-            render.add_shadow(8, 2)
-            frame = image2surface(render.base)
-        super().add_frame(frame)
-
-    def switch_frame(self, index: int):
-        super().switch_frame(index)
-        self.rect.center = self.loc
-
-    def update(self):
-        if self.show and self.enable:
-            if self.rect.collidepoint(pg.mouse.get_pos()):
-                if pg.mouse.get_pressed(3)[0]:
-                    if not self.press_lock:
-                        self.on_press()
-                        self.press_lock = True
-                    self.switch_frame(0)
-                else:
-                    if self.press_lock:
-                        self.on_up()
-                    self.press_lock = False
-                    self.switch_frame(1)
-            else:
-                self.press_lock = False
-                self.switch_frame(0)
-        elif not self.enable:
-            self.switch_frame(0)
-        super().update()
-
-    def on_press(self):
-        pass
-
-    def on_up(self):
-        pass
-
-
 class StartButton(Button):
     def __init__(self, loc):
         super().__init__(loc)
@@ -323,51 +147,14 @@ class StartButton(Button):
             self.show = data == TAKE_START
 
 
-class CoverButton(Button):
-    def __init__(self):
-        super().__init__((0, 0))
-        self.active_cover = None
-        self.cover_offset: tuple[int, int] = (0, 0)
-        self.show = False
-        self.cover_map: dict[int, tuple[str, tuple[int, int]]] = {}
-
-    def event_parse(self, event: int, data):
-        if event == EVENT_TAKE_CHANGE:
-            if event != TAKE_PLAY:
-                self.show = False
-                self.active_cover = None
-        elif event == EVENT_LEVEL_END:
-            print("Level was end, load cover")
-            self.change_layer(LAYER_END_UI)
-            cover_path, self.cover_offset = self.cover_map[data]
-            self.active_cover = eval(cover_path)
-        elif event == EVENT_LEVEL_RESET:
-            print("Level Reset Del cover")
-            self.show = False
-            self.active_cover = None
-        elif event == EVENT_COVER_RUN:
-            if self.active_cover:
-                self.show = False
-                self.active_cover.statics.append(self)
-
-    def update(self):
-        if self.active_cover:
-            cover_loc = self.active_cover.rect.topleft
-            new_loc = (cover_loc[0] + self.cover_offset[0], cover_loc[1] + self.cover_offset[1])
-            self.loc = new_loc
-            self.rect.center = tuple(new_loc)
-            self.show = True
-        super().update()
-
-
 class MoreGameButton(CoverButton):
     def __init__(self):
         super().__init__()
         self.add_frame(rs.buttons.more_game.up)
         self.add_frame(rs.buttons.more_game.down)
         self.cover_map = {
-            LEVEL_END_WIN: ("sm.win_cover", [521, 379]),
-            LEVEL_END_LOSE: ("sm.lose_cover", [521, 379]),
+            LEVEL_END_WIN: ("sm.win_cover", (521, 379)),
+            LEVEL_END_LOSE: ("sm.lose_cover", (521, 379)),
         }
         self.event_parse(EVENT_TAKE_CHANGE, TAKE_START)
 
@@ -377,11 +164,12 @@ class MoreGameButton(CoverButton):
             self.active_cover = None
             self.show = True
             if data == TAKE_START:
-                self.loc = (546, 450)
+                self.loc = Vector2(545, 450)
             elif data == TAKE_LEVEL_CHOOSE:
-                self.loc = (516, 698)
+                self.loc = Vector2(516, 698)
             else:
                 self.show = False
+            self.transform_location()
             return
         super().event_parse(event, data)
 
@@ -449,9 +237,9 @@ class MusicButton(Button):
         self.add_frame(rs.buttons.music.down)
         self.add_frame(rs.buttons.music.A_up)
         self.add_frame(rs.buttons.music.A_down)
-        self.music_opened = True
-        self.pause_lock = False
-        self.on_play = False
+        self.music_opened = sound
+        self.switch_lock = False
+        self.is_clicking = False
         rs.sound.music.play(-1)
         if not sound:
             self.music_pause()
@@ -460,14 +248,17 @@ class MusicButton(Button):
         if event == EVENT_TAKE_CHANGE:
             self.enable = True
             if data == TAKE_START:
-                self.loc = [50, 56]
+                self.loc = Vector2(50, 56)
             elif data == TAKE_PLAYERS_CHOOSE:
-                self.loc = [954, 100]
+                self.loc = Vector2(954, 100)
             elif data == TAKE_LEVEL_CHOOSE:
-                self.loc = [984, 58]
+                self.loc = Vector2(984, 58)
             elif data == TAKE_PLAY:
-                self.loc = [833, 46]
-        elif event == EVENT_LEVEL_ENTER or event == EVENT_LEVEL_RESET or event == EVENT_LEVEL_NEXT:
+                self.loc = Vector2(833, 46)
+            else:
+                return
+            self.transform_location()
+        elif event in [EVENT_LEVEL_ENTER, EVENT_LEVEL_RESET, EVENT_LEVEL_NEXT]:
             self.enable = True
         elif event == EVENT_LEVEL_END:
             self.enable = False
@@ -484,19 +275,38 @@ class MusicButton(Button):
         sound = True
         rs.sound.music.set_volume(100)
 
-    def update(self):
-        if self.rect.collidepoint(pg.mouse.get_pos()) and self.enable:
-            if pg.mouse.get_pressed(3)[0]:
-                if not self.pause_lock:
-                    self.music_opened = not self.music_opened
-                    self.music_resume() if self.music_opened else self.music_pause()
-                    self.pause_lock = True
-                self.switch_frame(0 if self.music_opened else 2)
-            else:
-                self.pause_lock = False
-                self.switch_frame(1 if self.music_opened else 3)
+    @staticmethod
+    def get_index(active: bool, down: bool):
+        if active:
+            return 1 if down else 0
         else:
-            self.switch_frame(0 if self.music_opened else 2)
+            return 3 if down else 2
+
+    def update(self):
+        if self.enable:
+            clicking = pg.mouse.get_pressed(3)[0]
+            if self.rect.collidepoint(pg.mouse.get_pos()):
+                if clicking:
+                    if not self.switch_lock:
+                        self.switch_lock = True
+                    self.switch_frame(self.get_index(not self.music_opened, False))
+                elif self.switch_lock:
+                    self.music_resume() if self.music_opened else self.music_pause()
+                    self.music_opened = not self.music_opened
+                    self.switch_lock = False
+                    self.switch_frame(self.get_index(self.music_opened, False))
+                else:
+                    self.switch_frame(self.get_index(self.music_opened, True))
+            elif self.switch_lock:
+                if clicking:
+                    self.switch_frame(self.get_index(self.music_opened, True))
+                else:
+                    self.switch_lock = False
+                    self.switch_frame(self.get_index(self.music_opened, False))
+            else:
+                self.switch_frame(self.get_index(self.music_opened, False))
+        else:
+            self.switch_frame(self.get_index(self.music_opened, False))
         super(FrameSprite, self).update()
 
 
@@ -526,7 +336,7 @@ class Players1Button(Button):
         if event == EVENT_TAKE_CHANGE:
             self.show = data == TAKE_PLAYERS_CHOOSE
 
-    def on_press(self):
+    def on_up(self):
         global players_count
         sm.send_event(EVENT_PLAYERS_COUNT_CHANGE, 1)
         players_count = 1
@@ -543,7 +353,7 @@ class Players2Button(Button):
         if event == EVENT_TAKE_CHANGE:
             self.show = data == TAKE_PLAYERS_CHOOSE
 
-    def on_press(self):
+    def on_up(self):
         global players_count
         sm.send_event(EVENT_PLAYERS_COUNT_CHANGE, 2)
         players_count = 2
@@ -560,7 +370,7 @@ class Players3Button(Button):
         if event == EVENT_TAKE_CHANGE:
             self.show = data == TAKE_PLAYERS_CHOOSE
 
-    def on_press(self):
+    def on_up(self):
         global players_count
         sm.send_event(EVENT_PLAYERS_COUNT_CHANGE, 3)
         players_count = 3
@@ -647,6 +457,8 @@ class PlayersKeys(FrameSprite):
         self.add_frame(rs.sprites.player_keys.p_1)
         self.add_frame(rs.sprites.player_keys.p_2)
         self.add_frame(rs.sprites.player_keys.p_3)
+        for frame in self.frames:
+            print(frame.get_rect())
         self.show = False
         self.last_player_counter = 0
 
@@ -697,70 +509,7 @@ class PlayersCH(FrameSprite):
             self.switch_frame(1)
 
 
-class TextSprite(BaseSprite):
-    def __init__(self, loc, text: str, font_size: float,
-                 image_size, outline_blur: bool = False, fill_color: str = "#FFCB00",
-                 outline: bool = False, outline_color: str = "#990000",
-                 shadow_offset: int = -1, shadow_radius: float = -1,
-                 spacing: int = 4, cache: bool = True,
-                 outline_width: float = 2, blur_radius: float = 2):
-        render = ImageRender(image_size, use_cache=cache)
-        render.add_text(text, font_size, image_size, text_color=fill_color,
-                        outline=outline, outline_width=outline_width, outline_color=outline_color, faster_outline=True,
-                        outline_blur=outline_blur, blur_radius=blur_radius, spacing=spacing)
-        if shadow_offset > 0 or shadow_radius > 0:
-            render.add_shadow(shadow_offset, shadow_radius)
-        self.layer_def = LAYER_UI
-        super().__init__(image2surface(render.base), loc)
-
-        ft = ImageFont.truetype("assets/方正胖娃简体.ttf", font_size)
-        text_image = Image.new("RGBA", image_size, (255, 255, 255, 255))
-        draw = ImageDraw.Draw(text_image)
-        x, y = (text_image.width // 2, text_image.height // 2)
-        draw.text((x, y), text, font=ft, fill="#FFCB00", anchor="mm", spacing=6)
-        self.text_image = image2surface(text_image)
-
-    def get_image(self):
-        return self.text_image
-
-
-class GameTitle(TextSprite):
-    def __init__(self, loc):
-        super().__init__(loc, "火柴人吃豆豆2", 95, (850, 200),
-                         outline=True, outline_blur=True, outline_width=2.5, blur_radius=2.2)
-        self.shadow = Shadow(self, 9, 2)
-        self.rect.center = self.loc
-
-    def event_parse(self, event: int, data):
-        if event == EVENT_TAKE_CHANGE:
-            self.show = data == TAKE_START
-
-
-class PlayersChooseTitle(TextSprite):
-    def __init__(self, loc):
-        super().__init__(loc, "选 择 人 数", 90, (850, 200), True, outline=True)
-        self.shadow = Shadow(self, 9, 2.5)
-        self.rect.center = self.loc
-        self.show = False
-
-    def event_parse(self, event: int, data):
-        if event == EVENT_TAKE_CHANGE:
-            self.show = data == TAKE_PLAYERS_CHOOSE
-
-
-class LevelChooseTitle(TextSprite):
-    def __init__(self, loc):
-        super().__init__(loc, "选 择 关 卡", 75, (350, 120), True, outline=True)
-        self.shadow = Shadow(self, 9, 2.5)
-        self.rect.center = self.loc
-        self.show = False
-
-    def event_parse(self, event: int, data):
-        if event == EVENT_TAKE_CHANGE:
-            self.show = data == TAKE_LEVEL_CHOOSE
-
-
-class CoverTitle(TextSprite):
+class CoverTitle(OldTextSprite):
     def __init__(self, text: str, font_size: float,
                  fill_color: str = "#FFCB00", outline_color: str = "#990000",
                  spacing: int = 20,
@@ -770,8 +519,8 @@ class CoverTitle(TextSprite):
                          outline=True, outline_color=outline_color,
                          spacing=spacing)
         self.change_layer(LAYER_END_UI)
+        self.set_align(Align.CENTER)
         self.shadow = Shadow(self, 9, 2.5)
-        self.rect.center = self.loc
         self.show = False
         self.end_msg = end_msg
         self.start_offset = False
@@ -800,11 +549,8 @@ class CoverTitle(TextSprite):
 
     def update(self):
         if self.start_offset:
-            new_loc = list(self.cover.rect.topleft)
-            new_loc[0] += self.cover_offset[0]
-            new_loc[1] += self.cover_offset[1]
-            self.loc: tuple[int, int] = type_cast(tuple[int, int], tuple(new_loc))
-            self.rect.topleft = tuple(self.loc)
+            self.loc: tuple[int, int] = self.cover.loc + Vector2(self.cover_offset)
+            self.transform_location()
         super().update()
 
 
@@ -820,7 +566,7 @@ class LoseCoverTitle(CoverTitle):
                          end_msg=LEVEL_END_LOSE, cover_offset=(393, 137), cover="sm.lose_cover")
 
 
-class LevelLevelText(TextSprite):
+class LevelLevelText(OldTextSprite):
     def __init__(self, loc):
         super().__init__(loc, "关卡 : ", 33.5, (150, 50), fill_color="#019901")
         self.show = False
@@ -830,7 +576,7 @@ class LevelLevelText(TextSprite):
             self.show = data == TAKE_PLAY
 
 
-class LevelLevelNumber(TextSprite):
+class LevelLevelNumber(OldTextSprite):
     def __init__(self, loc):
         super().__init__(loc, level, 33, (150, 50), fill_color="#019901")
         self.show = False
@@ -843,14 +589,14 @@ class LevelLevelNumber(TextSprite):
     def update(self):
         if self.show:
             if self.last_level != level:
-                render = ImageRender((150, 50))
+                render = OldImageRender((150, 50))
                 render.add_text(level, 33, (150, 50), text_color="#019901")
-                self.image = image2surface(render.base)
+                self.update_image(image2surface(render.base))
                 self.last_level = level[:]
         super().update()
 
 
-class BeanCounter(TextSprite):
+class BeanCounter(OldTextSprite):
     def __init__(self, loc):
         super().__init__(loc, f"0    / 11",
                          30.5, (150, 50), fill_color="#019901")
@@ -866,10 +612,10 @@ class BeanCounter(TextSprite):
             if self.last_beans != sm.level_manager.golden_bean:
                 beans = sm.level_manager.golden_bean
                 self.last_beans = beans + 1 - 1
-                render = ImageRender((150, 50))
+                render = OldImageRender((150, 50))
                 render.add_text(f"{beans}{'' if beans > 9 else '  '} / {sm.level_manager.golden_bean_all}",
                                 30.5, (150, 50), text_color="#019901")
-                self.image = image2surface(render.base)
+                self.update_image(image2surface(render.base))
         super().update()
 
 
@@ -983,6 +729,7 @@ class LevelElement(BaseSprite):
 
             global move_target
             if pg.mouse.get_pressed(3)[0] and move_target in sm.level_manager.elements:
+                assert isinstance(move_target, LevelElement)
                 if self.rect.collidepoint(pg.mouse.get_pos()) and \
                         (not move_target.wait_action) and \
                         (not move_target.drag_lock):
@@ -1063,28 +810,24 @@ class Gun(LevelElement):
 
     def shoot(self):
         if self.state:
-            new_loc = list(self.rect.topleft)
-            new_loc[0] -= 42
-            new_loc[1] -= 11
-            speed = -self.speed + 1 - 1
+            new_loc = self.rect.topleft
         else:
-            new_loc = list(self.rect.topright)
-            new_loc[0] -= 42
-            new_loc[1] -= 11
-            speed = self.speed + 1 - 1
-        bombs = Bombs(new_loc, speed)
-        sm.level_manager.temps.append(bombs)
+            new_loc = self.rect.topright
+        new_loc = (new_loc[0] - 42, new_loc[1] - 11)
+        bombs = Bombs(new_loc, int(self.speed))
+        sm.level_manager.others.append(bombs)
+        # noinspection PyTypeChecker
         sm.level_manager.kills.add(bombs)
 
 
 class Bombs(BaseSprite):
-    def __init__(self, loc, speed: float):
+    def __init__(self, loc: tuple[int, int], speed: float):
         self.layer_def = LAYER_PLAY
         super().__init__(rs.sprites.bombs.normal, loc)
         self.last_update = perf_counter()
         self.speed = speed
         self.enable = True
-        self.x = loc[0] + 1 - 1
+        self.x: float = loc[0]
 
     def event_parse(self, event: int, data):
         if event == EVENT_LEVEL_END:
@@ -1103,8 +846,8 @@ class Bombs(BaseSprite):
     def update(self):
         if perf_counter() - self.last_update > 1 / 40 and self.enable:
             self.x += self.speed
-            self.loc = (int(self.x), self.loc[1])
-            self.rect.topleft = tuple(self.loc)
+            self.loc.x = int(self.x)
+            self.transform_location()
             if self.collide:
                 self.kill()
             self.last_update = perf_counter()
@@ -1115,7 +858,7 @@ class Bombs(BaseSprite):
         self.kill()
 
     def kill(self):
-        sm.level_manager.temps.remove(self)
+        sm.level_manager.others.remove(self)
         super().kill()
 
 
@@ -1139,7 +882,7 @@ class XKill(LevelElement):
         if perf_counter() - self.last_update > self.frame_time:
             if self.frame_index >= len(self.frames):
                 self.frame_index = 0
-            self.image = self.frames[self.frame_index]
+            self.update_image(self.frames[self.frame_index])
 
             new_loc = self.loc
             if not self.dir:
@@ -1185,11 +928,12 @@ class BeanEatAnimation(FrameSprite):
     def get_move_animation_loc(self, percent: float):
         delta_x = int((self.stop_loc[0] - self.start_loc[0]) * percent)
         delta_y = int((self.stop_loc[1] - self.start_loc[1]) * percent)
-        return self.loc[0] + delta_x, self.loc[1] + delta_y
+        return Vector2(self.loc.x + delta_x, self.loc.y + delta_y)
 
     def update(self):
         if perf_counter() - self.last_frame > self.frame_time:
             self.loc = self.get_move_animation_loc(self.now_frame_index / len(self.frames))
+            self.transform_location()
             try:
                 self.switch_frame(self.now_frame_index + 1)
             except IndexError:
@@ -1252,44 +996,47 @@ class Cover(BaseSprite):
             self.show = False
         elif event == EVENT_LEVEL_END:
             if data == self.msg:
-                self.loc = self.rect.topleft = (0, -750)
+                self.loc = Vector2(0, -750)
                 self.show = True
                 self.y_in_move = True
-                self.last_update = perf_counter()
+                self.last_update = 0
         elif event == EVENT_COVER_RUN:
             if data == self.msg:
                 self.x_in_move = True
+                self.last_update = 0
 
     def update(self):
         if self.y_in_move and perf_counter() - self.last_update > 0.02:
-            dy = self.target_y - self.loc[1]
+            dy = self.target_y - self.loc.y
             delta_y = int(dy / 11)
-            if self.loc[1] + delta_y > self.stop_y:
-                self.loc = (self.loc[0], copy(self.stop_y))
+            if self.loc.y + delta_y > self.stop_y:
+                self.loc.y = int(self.stop_y)
                 self.y_in_move = False
-            self.loc = (self.loc[0], self.loc[1] + delta_y)
-            self.rect.topleft = tuple(self.loc)
-            self.last_update = perf_counter()
+            else:
+                self.loc.y += delta_y
+                self.rect.topleft = self.loc.tuple
+                self.last_update = perf_counter()
         if self.x_in_move and perf_counter() - self.last_update > 0.02:
             if not self.static_cover:
-                image = surface2image(self.get_image())
+                image = surface2image(self.image)
                 for static in self.statics:
                     assert isinstance(static, BaseSprite)
-                    image.paste(surface2image(static.image), static.rect.topleft)
+                    image.paste(surface2image(static.raw_image), static.rect.topleft)
                 self.static_cover = image2surface(image)
-                self.saved_cover = self.image.copy()
-            dx = self.target_x - self.loc[0]
+                self.saved_cover = self.raw_image.copy()
+            dx = self.target_x - self.loc.x
             delta_x = int(dx / 11)
-            self.loc = (self.loc[0] + delta_x, self.loc[1])
-            self.rect.topleft = tuple(self.loc)
-            self.static_cover.set_alpha(int(255 * (1050 - dx)))
-            self.image = self.static_cover
-            self.last_update = perf_counter()
-            if self.loc[0] > self.stop_x:
-                self.loc = (copy(self.stop_x), self.loc[1])
+            self.loc.x += delta_x
+            if self.loc.x > self.stop_x:
+                self.loc.x = int(self.stop_x)
                 self.x_in_move = False
-                self.image = self.saved_cover
+                self.update_image(self.saved_cover)
                 sm.send_event(EVENT_LEVEL_NEXT, 0)
+            else:
+                self.rect.topleft = self.loc.tuple
+                self.static_cover.set_alpha(int(255 * (1050 - dx)))
+                self.update_image(self.static_cover)
+                self.last_update = perf_counter()
 
         super().update()
 
@@ -1312,7 +1059,7 @@ class CompleteCover(Cover):
 class AnimationSprite(FrameSprite):
     def __init__(self, loc):
         super().__init__(loc)
-        self.rect.center = self.loc
+        self.align = Align.CENTER
         self.animations = {}
         self.played_animation = None
         self.end_stop = False
@@ -1338,8 +1085,6 @@ class AnimationSprite(FrameSprite):
 
     def switch_frame(self, index: int):
         super().switch_frame(index)
-        self.rect = self.image.get_rect()
-        self.rect.center = self.loc
 
     def update(self):
         if self.show and self.played_animation and self.animation_index != -1:
@@ -1347,8 +1092,6 @@ class AnimationSprite(FrameSprite):
                 frame_delta = int((perf_counter() - self.last_update) // self.ani_frame_time)
                 self.switch_frame(self.ani_frame_start + self.animation_index)
                 self.animation_index += frame_delta
-                if self.played_animation.startswith("die"):
-                    print(frame_delta)
                 if self.animation_index >= self.ani_frame_count:
                     if self.end_stop:
                         self.animation_index = -1
@@ -1357,8 +1100,7 @@ class AnimationSprite(FrameSprite):
                         self.animation_index = 0
                 self.last_update += frame_delta * self.ani_frame_time
         if not OLD_ANIMATION:
-            self.rect = self.image.get_rect()
-            self.rect.center = self.loc
+            self.transform_location()
         super().update()
 
 
@@ -1376,9 +1118,10 @@ class Player(AnimationSprite):
             3: (pg.K_i, pg.K_j, pg.K_l),
         }
         self.layer_def = LAYER_PLAY
-        super().__init__(loc)
+        super().__init__(tuple(loc))
+        self.set_align(Align.CENTER)
         rs_player = rs_map[player_id]
-        self.add_frame(rs_player.box)
+        self.box = rs_player.box
         self.add_animation(rs_player.stand, "stand", 12)
         self.add_animation(rs_player.run, "run", 20)
         self.add_animation(rs_player.die, "die", 20)
@@ -1426,9 +1169,10 @@ class Player(AnimationSprite):
         self.x += x
         self.y -= y
 
-        self.rect.topleft = tuple((self.x, self.y))
-
-        self.loc = self.rect.center
+        self.loc.x = int(self.x)
+        self.loc.y = int(self.y)
+        self.transform_location()
+        self.rect.topleft = self.transformed_loc
 
     @property
     def collide(self):
@@ -1438,8 +1182,8 @@ class Player(AnimationSprite):
     def update(self):
         if perf_counter() - self.last_pos_update > self.frame_time and self.enable:
             self.saved_rect = self.rect.copy()
-            self.rect = self.frames[0].get_rect()
-            self.rect.center = self.loc
+            self.rect = self.box.get_rect()
+            self.rect.center = self.loc.tuple
 
             self.move(y=self.Vy)
 
@@ -1515,7 +1259,7 @@ class Player(AnimationSprite):
             self.last_pos_update = perf_counter()
             self.rect = self.saved_rect.copy()
         if self.played_animation.startswith("die"):
-            self.rect.topleft = self.rect.center
+            self.set_align(Align.TOPLEFT)
         super().update()
 
 
@@ -1529,7 +1273,7 @@ class LevelManager(BaseSprite):
         self.kills = pg.sprite.Group()
         self.beans = pg.sprite.Group()
         self.edges = pg.sprite.Group()
-        self.temps = []
+        self.others = []
         self.elements = []
         self.players = []
         self.level_datas = json.load(open("assets/data/level_data.json"))
@@ -1582,7 +1326,6 @@ class LevelManager(BaseSprite):
                 sm.levels_container.unlock_level(next_level)
         elif event == EVENT_LEVEL_NEXT:
             levels = list(self.level_datas.keys())
-            print(level)
             level = levels[levels.index(level) + 1]
             self.unload_level()
             self.load_level(level)
@@ -1631,7 +1374,7 @@ class LevelManager(BaseSprite):
         global move_target
         if move_target in self.elements:
             move_target = None
-        for sprite in self.temps + self.elements + self.players:
+        for sprite in self.others + self.elements + self.players:
             sprite.kill()
         self.elements.clear()
         self.players.clear()
@@ -1650,7 +1393,7 @@ class SpritesManager:
     def __init__(self):
         self.background = BackGround()
         self.brown_player_pose = BrownPlayerPose([870, 520])
-        self.game_title = GameTitle([524, 114])
+        self.game_title = GameTitle((523, 116))
         self.player_choose_title = PlayersChooseTitle([540, 100])
         self.level_choose_title = LevelChooseTitle([538, 54])
         self.more_game_button = MoreGameButton()
@@ -1701,6 +1444,7 @@ class SpritesManager:
 timer.start("spr_create")  # 元素创建计时器
 logger.log("Creating Sprites...")
 sm = SpritesManager()
+public_data.sprites_manager = sm
 logger.log("Sprites Creating Done!")
 timer.end("spr_create")  # 元素创建计时器
 timer.end("all")
@@ -1713,7 +1457,7 @@ logger.log(f"Game Launch Use: {timer.endT('all')}")
 
 logger.finish()
 logger.render_now()
-move_target = sm.return_choose
+move_target = sm.game_title
 clock = pg.time.Clock()
 pg.key.stop_text_input()
 st = perf_counter()

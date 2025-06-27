@@ -162,8 +162,6 @@ class Sprites:
 
     class Player:
         def __init__(self, root: str):
-            self.box = ""
-
             class Stand:
                 frames = FRAME_GEN(root + "/stand/{}.svg", 4)
                 frames.append(GA(frames[0].asset_path))
@@ -309,7 +307,7 @@ class Buttons:
                             font_size: float,
                             scale: float):
             image = render_svg2image(bg_path, scale=scale)
-            render = ImageRender(image.size, image)
+            render = OldImageRender(image.size, image)
             render.add_text(text, font_size, image.size, "#FFCB00",
                             True, 3, "#990000",
                             text_loc=loc)

@@ -6,6 +6,7 @@ from shutil import rmtree
 from lib.define import *
 
 # 素材缓存路径
+# %TEMP%\HuoDouReloaded_Cache
 CACHE_PATH = path_join(expandvars("%TEMP%"), "HuoDouReloaded_Cache")
 
 

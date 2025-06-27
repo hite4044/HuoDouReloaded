@@ -11,7 +11,7 @@ from engine.cache import mk_cache
 from lib.public_data import log_func
 
 # 常量定义
-RENDER_SCALE = 3
+RENDER_SCALE = 1.5
 use_cache = True
 
 
@@ -103,7 +103,7 @@ def draw_outline_text(draw: ImageDraw.ImageDraw,
     draw.text((x, y), text, font=font, fill=fillcolor, anchor="mm", spacing=spacing)
 
 
-class ImageRender:
+class OldImageRender:
     def __init__(self, size: list[int] | tuple[int, int] = (50, 50),
                  base_image: pg.surface.Surface | Image.Image = None,
                  use_cache: bool = False):
@@ -131,7 +131,7 @@ class ImageRender:
                     use_alpha: bool = True, cover_times: int = 1):
         cover = self._base
         for i in range(cover_times):
-            cover = get_image_cover(cover, use_alpha)
+            cover = get_image_cover(cover, not use_alpha)
             if i == 0:
                 cover_new = Image.new("RGBA", [self._base.width + 100, self._base.height + 100], (0, 0, 0, 0))
                 cover_new.paste(cover, (50, 50))
@@ -151,7 +151,7 @@ class ImageRender:
         new_size[0] += 2 * int(blur_radius + 1)
         new_size[1] += offset + int(blur_radius) + 1
         new_base = Image.new("RGBA", new_size, (255, 255, 255, 0))
-        new_base.paste(cover, (-50 + int(blur_radius) + 1, -50 + offset))
+        new_base.paste(cover, (-50 + int(blur_radius) + 1, -50 + offset), mask=cover.getchannel("A"))
         new_base.paste(self._base, (int(blur_radius) + 1, 0), mask=self._base.split()[3])
         self._base = new_base
 
@@ -163,12 +163,12 @@ class ImageRender:
             self._add_shadow(offset, blur_radius, use_alpha, cover_times)
 
     def _add_text(self,
-                  text: str, font_size: float = 18, image_size=[50, 50], text_color="#FFCB00",
+                  text: str, font_size: float = 18, image_size=(50, 50), text_color="#FFCB00",
                   outline: bool = False, outline_width: float | int = 3, outline_color="#990000",
                   faster_outline: bool = False, text_loc: tuple[int, int] | list[int] = None,
                   outline_blur: bool = False, blur_radius: float = 3,
                   spacing: int = 4):
-        ft = ImageFont.truetype("assets/方正胖娃简体.ttf", font_size)
+        ft = ImageFont.truetype("assets/方正胖娃简体-CustomSpace.ttf", font_size)
         image = Image.new("RGBA", image_size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(image)
 
@@ -182,7 +182,7 @@ class ImageRender:
             if faster_outline:
                 image = text_image.filter(ImageFilter.GaussianBlur(radius=outline_width))
                 cover_color = tuple(map(lambda x: int(x, 16), [outline_color[i:i + 2] for i in range(1, 6, 2)]))
-                image = get_image_cover(image, False, cover_color)
+                image = get_image_cover(image, True, cover_color)
                 if outline_blur:
                     image = image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
             else:
@@ -223,7 +223,7 @@ class ImageRender:
                     except TypeError:
                         pass
             image_cache_path = mk_cache(f"{task_hash.hexdigest()}.png")
-            if not isfile(image_cache_path):
+            if isfile(image_cache_path):
                 image = Image.open(image_cache_path)
                 return image
             else:

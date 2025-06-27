@@ -31,6 +31,10 @@ class Counter:
         else:
             raise KeyError(f"Timer {name} does not exist")
 
+    def end_start(self, end: str, start: str):
+        self.end(end)
+        self.start(start)
+
     def endT(self, name: str | None = None):
         ret = self.end(name)
         return f"{ret * 1000:.3f} ms"
