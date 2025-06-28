@@ -9,7 +9,7 @@ from PIL import ImageFont, ImageDraw, Image
 from engine import resource as rs
 from engine.asset_parser import image2surface
 from lib.define import *
-from lib.public_data import public_data
+from lib.public_data import public
 
 
 class VisualLogger(pg.sprite.Sprite):
@@ -87,6 +87,6 @@ class VisualLogger(pg.sprite.Sprite):
 
     def update(self):
         pg.event.get()
-        public_data.screen.fill((0, 0, 0))
-        public_data.screen.blit(self.image, (0, 0))
+        public.screen.fill((0, 0, 0))
+        public.screen.blit(self.image, (0, 0))
         pg.display.update()

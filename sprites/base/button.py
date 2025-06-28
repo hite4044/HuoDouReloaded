@@ -1,8 +1,9 @@
 import pygame as pg
 
-from engine.asset_parser import OldImageRender, image2surface
+from engine.asset_parser import OldImageRender, image2surface, surface2image
 from lib.define import *
-from lib.public_data import public_data
+from lib.image_render import ImageRender, RenderShadowArgs
+from lib.public_data import public
 from sprites.base.base_sprite import Align, Vector2
 from sprites.base.frame_sprite import FrameSprite
 
@@ -16,15 +17,12 @@ class Button(FrameSprite):
         self.press_lock = False
         self.enable = True
 
-    def add_frame(self, frame):
+    def add_frame(self, frame: pg.surface.Surface):
         if self.shadow:
-            render = OldImageRender(frame.get_size(), frame)
-            render.add_shadow(8, 2)
-            frame = image2surface(render.base)
+            render = ImageRender(frame.get_size(), surface2image(frame))
+            render.add_shadow(RenderShadowArgs(6, 2.5))
+            frame = image2surface(render.image)
         super().add_frame(frame)
-
-    def switch_frame(self, index: int):
-        super().switch_frame(index)
 
     def update(self):
         if self.show and self.enable:
@@ -60,7 +58,7 @@ class CoverButton(Button):
         self.active_cover = None
         self.cover_offset: Vector2 = Vector2(0, 0)
         self.show = False
-        self.cover_map: dict[int, tuple[str, tuple[int, int]]] = {}
+        self.cover_map: dict[int, tuple[str, Vector2]] = {}
 
     def event_parse(self, event: int, data):
         if event == EVENT_TAKE_CHANGE:
@@ -69,9 +67,8 @@ class CoverButton(Button):
                 self.active_cover = None
         elif event == EVENT_LEVEL_END:
             self.change_layer(LAYER_END_UI)
-            cover_path, offset = self.cover_map[data]
-            self.cover_offset = Vector2(offset)
-            globals_vars = {"sm": public_data.sprites_manager}
+            cover_path, self.cover_offset = self.cover_map[data]
+            globals_vars = {"sm": public.sprites_manager}
             self.active_cover = eval(cover_path, globals_vars)
         elif event == EVENT_LEVEL_RESET:
             self.show = False

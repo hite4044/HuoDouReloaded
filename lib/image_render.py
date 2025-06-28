@@ -9,6 +9,7 @@ from PIL import ImageDraw
 from PIL import ImageFont
 
 from engine.cache import mk_cache
+from lib.public_data import public
 
 USE_CACHE = False
 
@@ -30,7 +31,7 @@ def cvt_hex_color(color: str) -> tuple[int, int, int]:
 @dataclass
 class RenderTextArgs:
     text: str
-    font_size: int = 48
+    font_size: float = 48
     anchor: str | None = None
     loc: tuple[int, int] | None = None
     color: str = "#FFCB00"
@@ -85,13 +86,24 @@ class RenderLow:
     @staticmethod
     def render_shadow(image: Image.Image, args: RenderShadowArgs):
         cover = get_image_cover(image, False)  # 先获取原图的遮罩
-        cover = ImageOps.expand(cover, (0, ceil(args.offset + args.blur), 0, 0), (255, 255, 255, 0))  # 拓展大小以准备放置阴影
-        return cover.filter(ImageFilter.GaussianBlur(args.blur))  # 高斯模糊遮罩
+        before = cover.size
+        exp = ceil(args.blur * 2)
+        cover = ImageOps.expand(cover,
+                                (exp, ceil(args.offset), exp, exp),
+                                image.getpixel((0, 0)))  # 拓展大小以准备放置阴影
+        print(cover.size, before, ceil(args.blur), ceil(args.offset + args.blur))
+        cover = cover.filter(ImageFilter.GaussianBlur(args.blur))  # 高斯模糊遮罩
+        # draw = ImageDraw.Draw(cover)
+        # draw.rectangle((0, 0, cover.width-1, cover.height-1), (255, 0, 0, 255))
+        return cover
 
 
 class ImageRender:
-    def __init__(self, size: tuple[int, int]):
-        self.base = Image.new("RGBA", size, (153, 0, 0, 0))
+    def __init__(self, size: tuple[int, int], base: Image.Image = None):
+        if base:
+            self.base = base
+        else:
+            self.base = Image.new("RGBA", size, (153, 0, 0, 0))
         self.render_tasks: list[tuple[Callable, Any]] = []
         self.last_task: tuple[Callable, Any] | None = None
 
@@ -108,7 +120,9 @@ class ImageRender:
     @task_func
     def add_shadow(self, args: RenderShadowArgs):
         shadow = RenderLow.render_shadow(self.base, args)
-        shadow.alpha_composite(self.base, (0, 0))
+        # draw = ImageDraw.Draw(self.base)
+        # draw.rectangle((0, 0, self.base.width-1, self.base.height-1), (0, 0, 255, 255))
+        shadow.alpha_composite(self.base, (ceil(args.blur * 2), 0))
         self.base = shadow
 
     @task_func
@@ -126,7 +140,7 @@ class ImageRender:
         if self.render_tasks:
             tasks_hash = self.get_tasks_hash()
             cache_path = mk_cache(f"{tasks_hash}.png")
-            if isfile(cache_path) and USE_CACHE:
+            if isfile(cache_path) and public.use_cache:
                 return Image.open(cache_path)
             self.last_task = None
             for t_task_func, args in self.render_tasks:

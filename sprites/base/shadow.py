@@ -2,7 +2,7 @@ import pygame as pg
 from PIL import Image, ImageFilter
 
 from engine.asset_parser import surface2image, get_image_cover
-from sprites.base.base_sprite import BaseSprite, Vector2
+from sprites.base.base_sprite import BaseSprite, Vector2, Align
 
 
 class Shadow(BaseSprite):
@@ -13,7 +13,7 @@ class Shadow(BaseSprite):
         self.radius = radius
         self.layer_def = sprite.layer - 1
         super().__init__(self.make_cover(sprite.image, radius), (sprite.loc + Vector2(0, self.offset)).tuple)
-        self.set_align(sprite.align)
+        self.set_align(Align(sprite.align))
         self.raw_cbk = sprite.image_update_callback
         sprite.image_update_callback = self.image_update_callback
         self.image_update_callback(sprite.image)

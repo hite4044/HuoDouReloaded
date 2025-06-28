@@ -4,7 +4,7 @@ import pygame as pg
 
 from engine import resource as rs
 from lib.define import *
-from lib.public_data import sprites, log_func, layer_updates, public_data
+from lib.public_data import sprites, log_func, layer_updates, public
 
 
 class Align(Enum):
@@ -109,7 +109,7 @@ class BaseSprite(pg.sprite.Sprite):
 
     def update(self):  # 渲染图像
         if self.show:
-            public_data.screen.blit(self.raw_image, self.transformed_loc)
+            public.screen.blit(self.raw_image, self.transformed_loc)
 
     def kill(self):  # 删除精灵
         sprites[self.layer].remove(self)
