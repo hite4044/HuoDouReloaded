@@ -36,7 +36,7 @@ class GameTitle(TextSprite):
         super().__init__(loc, (711, 137))
         self.set_align(Align.CENTER)
         self.render.add_text(RenderTextArgs(generate_space("火柴人吃豆豆2", 28), 98))
-        self.render.add_grow(RenderGrowArgs(width=1.9, blur=2.5))
+        self.render.add_grow(RenderGrowArgs(width=2.3, blur=2))
         self.render.add_shadow(RenderShadowArgs(blur=2, offset=7))
         self.finish_render()
 
@@ -45,12 +45,15 @@ class GameTitle(TextSprite):
             self.show = data == TAKE_START
 
 
-class PlayersChooseTitle(OldTextSprite):
+class PlayersChooseTitle(TextSprite):
     def __init__(self, loc):
-        super().__init__(loc, "选 择 人 数", 90, (850, 200), True, outline=True)
-        self.set_align(Align.CENTER)
-        self.shadow = Shadow(self, 9, 2.5)
+        super().__init__(loc, (850, 200))
         self.show = False
+        self.set_align(Align.CENTER)
+        self.render.add_text(RenderTextArgs(generate_space("选择人数", 48), 90))
+        self.render.add_grow(RenderGrowArgs(width=2.1, blur=2))
+        self.render.add_shadow(RenderShadowArgs(blur=2, offset=7))
+        self.finish_render()
 
     def event_parse(self, event: int, data):
         if event == EVENT_TAKE_CHANGE:
@@ -72,19 +75,24 @@ class LevelChooseTitle(OldTextSprite):
 class CoverTitle(TextSprite):
     def __init__(self, text: str, font_size: float,
                  fill_color: str = "#FFCB00", outline_color: str = "#990000",
-                 end_msg: int = LEVEL_END_WIN, cover_offset: tuple[int, int] = (0, 0), cover: str = None):
+                 end_msg: int = LEVEL_END_WIN, cover_offset: tuple[int, int] = (0, 0), cover: str = None,
+                 line1_loc: tuple[int, int] = (0, 0),
+                 line2_loc: tuple[int, int] = (0, 0)):
         super().__init__((0, 0), (300, 180))
         self.change_layer(LAYER_END_UI)
         self.set_align(Align.TOPLEFT)
         self.show = False
+        self.need_follow = False
         self.end_msg = end_msg
         self.cover_offset = cover_offset
         self.cover_str = cover
         self.cover = None
 
-        self.render.add_text(RenderTextArgs(text, font_size, color=fill_color))
+        line1, line2 = text.split("\n")
+        self.render.add_text(RenderTextArgs(line1, font_size, color=fill_color, loc = line1_loc))
+        self.render.add_text(RenderTextArgs(line2, font_size, color=fill_color, loc = line2_loc))
         self.render.add_grow(RenderGrowArgs(width=2, blur=2, color=outline_color))
-        self.render.add_shadow(RenderShadowArgs(blur=2.5, offset=9))
+        self.render.add_shadow(RenderShadowArgs(offset=7, blur=2))
         self.finish_render()
 
     def event_parse(self, event: int, data):
@@ -92,30 +100,38 @@ class CoverTitle(TextSprite):
             if data != TAKE_PLAY:
                 self.show = False
         elif event == EVENT_LEVEL_RESET:
-            self.show = False
+            self.show = self.need_follow = False
         elif event == EVENT_LEVEL_END:
             if data == self.end_msg:
                 self.cover = eval(self.cover_str, {"sm": public.sm})
-                self.show = True
-        elif event == EVENT_COVER_RUN:
+                self.show = self.need_follow = True
+        elif event == EVENT_COVER_FINISH:
+            if data == self.end_msg:
+                self.need_follow = False
+        elif event == EVENT_COVER_EXIT:
             if data == self.end_msg:
                 public.sm.win_cover.statics.append(self)
                 self.show = False
 
     def update(self):
-        if self.show:
+        if self.need_follow:
             self.loc: tuple[int, int] = self.cover.loc + Vector2(self.cover_offset)
             self.transform_location()
+            self.rect.topleft = self.transformed_loc
         super().update()
 
 
 class WinCoverTitle(CoverTitle):
     def __init__(self):
-        super().__init__(" 恭喜你\n过关了！", 67,
-                         end_msg=LEVEL_END_WIN, cover_offset=(393, 137), cover="sm.win_cover")
+        super().__init__("恭喜你\n过关了！", 67,
+                         end_msg=LEVEL_END_WIN, cover_offset=(393, 136), cover="sm.win_cover",
+                         line1_loc=(18, 21),
+                         line2_loc=(12, 100))
 
 
 class LoseCoverTitle(CoverTitle):
-    def __init__(self):
-        super().__init__(" 真遗憾\n失败了！", 67, "#B5FEFF", "#0033FF",
-                         end_msg=LEVEL_END_LOSE, cover_offset=(393, 137), cover="sm.lose_cover")
+    def __init__(self):#  
+        super().__init__("真遗憾\n失败了！", 67, "#B5FEFF", "#0033FF",
+                         end_msg=LEVEL_END_LOSE, cover_offset=(393, 136), cover="sm.lose_cover",
+                         line1_loc=(28, 25),
+                         line2_loc=(12, 104))

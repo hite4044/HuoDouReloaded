@@ -2,6 +2,7 @@ import hashlib
 from dataclasses import dataclass, asdict
 from math import ceil
 from os.path import isfile
+from time import perf_counter
 from typing import Callable, Any
 
 from PIL import Image, ImageFilter, ImageOps
@@ -9,9 +10,8 @@ from PIL import ImageDraw
 from PIL import ImageFont
 
 from engine.cache import mk_cache
+from lib.config import gm_config
 from lib.public_data import public
-
-USE_CACHE = False
 
 
 def get_image_cover(raw_image: Image.Image, binary_alpha: bool = False, cover_color=(0, 0, 0)):
@@ -20,6 +20,12 @@ def get_image_cover(raw_image: Image.Image, binary_alpha: bool = False, cover_co
         cover.putalpha(raw_image.split()[3].point(lambda p: p > 0 and 255))
     else:
         cover.putalpha(raw_image.split()[3])
+    return cover
+
+
+def get_image_alpha_cover(raw_image: Image.Image, threshold: int = 5, cover_color=(0, 0, 0)):
+    cover = Image.new("RGBA", raw_image.size, cover_color + (0,))
+    cover.putalpha(raw_image.getchannel("A").point(lambda p: 255 if p > threshold else int(p / threshold * 255)))
     return cover
 
 
@@ -35,6 +41,7 @@ class RenderTextArgs:
     anchor: str | None = None
     loc: tuple[int, int] | None = None
     color: str = "#FFCB00"
+    spacing: int = 0
 
 
 @dataclass
@@ -74,27 +81,23 @@ class RenderLow:
         if args.loc is None:
             left, top, right, bottom = draw.textbbox((0, 0), args.text, font=font, anchor=args.anchor)
             args.loc = ((image.width - (right - left)) // 2, (image.height - (bottom - top)) // 2)  # 计算居中位置
-        draw.text(args.loc, args.text, args.color, font=font, anchor=args.anchor)
+        draw.text(args.loc, args.text, args.color, font=font, anchor=args.anchor, spacing=args.spacing)
         return image
 
     @staticmethod
     def render_grow(image: Image.Image, args: RenderGrowArgs):
         cover = image.filter(ImageFilter.GaussianBlur(args.width))
-        cover = get_image_cover(cover, True, cvt_hex_color(args.color))
+        cover = get_image_alpha_cover(cover, cover_color=cvt_hex_color(args.color))
         return cover.filter(ImageFilter.BoxBlur(args.blur))
 
     @staticmethod
     def render_shadow(image: Image.Image, args: RenderShadowArgs):
         cover = get_image_cover(image, False)  # 先获取原图的遮罩
-        before = cover.size
         exp = ceil(args.blur * 2)
         cover = ImageOps.expand(cover,
                                 (exp, ceil(args.offset), exp, exp),
                                 image.getpixel((0, 0)))  # 拓展大小以准备放置阴影
-        print(cover.size, before, ceil(args.blur), ceil(args.offset + args.blur))
         cover = cover.filter(ImageFilter.GaussianBlur(args.blur))  # 高斯模糊遮罩
-        # draw = ImageDraw.Draw(cover)
-        # draw.rectangle((0, 0, cover.width-1, cover.height-1), (255, 0, 0, 255))
         return cover
 
 
@@ -120,8 +123,6 @@ class ImageRender:
     @task_func
     def add_shadow(self, args: RenderShadowArgs):
         shadow = RenderLow.render_shadow(self.base, args)
-        # draw = ImageDraw.Draw(self.base)
-        # draw.rectangle((0, 0, self.base.width-1, self.base.height-1), (0, 0, 255, 255))
         shadow.alpha_composite(self.base, (ceil(args.blur * 2), 0))
         self.base = shadow
 
@@ -129,8 +130,15 @@ class ImageRender:
     def add_image(self, args: RenderImageArgs):
         self.base.paste(args.image, args.loc)
 
+    @task_func
+    def add_bg_image(self, args: RenderImageArgs):
+        args.image.alpha_composite(self.base)
+        self.base = args.image
+
     def get_tasks_hash(self):
-        value = hashlib.md5()
+        timer = perf_counter()
+        value = hashlib.md5(str(self.base.size).encode())
+        #print(perf_counter()-timer)
         for func, args in self.render_tasks:
             value.update(str(asdict(args)).encode("utf-8"))
         return value.hexdigest()
@@ -141,7 +149,7 @@ class ImageRender:
             tasks_hash = self.get_tasks_hash()
             cache_path = mk_cache(f"{tasks_hash}.png")
             if isfile(cache_path) and public.use_cache:
-                return Image.open(cache_path)
+                    return Image.open(cache_path)
             self.last_task = None
             for t_task_func, args in self.render_tasks:
                 t_task_func(self, args)

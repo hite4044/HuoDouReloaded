@@ -24,7 +24,7 @@ class NextLevelButton(CoverButton):
         super().event_parse(event, data)
 
     def on_up(self):
-        public.send_event(EVENT_COVER_RUN, 0)
+        public.send_event(EVENT_COVER_EXIT, 0)
 
 
 class RetryButton(CoverButton):
@@ -67,7 +67,7 @@ class ReturnButton(Button):
 
 class MoreGameLite(Button):
     def __init__(self, loc):
-        super().__init__(loc)
+        super().__init__(loc, shadow=True)
         self.add_frame(rs.buttons.games.up)
         self.add_frame(rs.buttons.games.down)
         self.show = False
@@ -83,7 +83,7 @@ class MoreGameLite(Button):
 
 class ResetButton(Button):
     def __init__(self, loc):
-        super().__init__(loc)
+        super().__init__(loc, shadow=True)
         self.add_frame(rs.buttons.reset.up)
         self.add_frame(rs.buttons.reset.down)
         self.show = False
@@ -106,7 +106,7 @@ class ResetButton(Button):
 
 class HomeButton(Button):
     def __init__(self, loc):
-        super().__init__(loc)
+        super().__init__(loc, shadow=True)
         self.add_frame(rs.buttons.home.up)
         self.add_frame(rs.buttons.home.down)
         self.show = False

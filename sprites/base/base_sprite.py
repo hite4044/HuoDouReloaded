@@ -22,6 +22,7 @@ class Vector2:
             self.x: int = loc[0]
             self.y: int = loc[1]
 
+    @property
     def copy(self):
         return Vector2((self.x, self.y))
 
@@ -42,12 +43,16 @@ class Vector2:
     def tuple(self):
         return self.x, self.y
 
+    @property
+    def list(self):
+        return [self.x, self.y]
+
     def __str__(self):
         return f"Vector2({self.x}, {self.y})"
 
 
 class BaseSprite(pg.sprite.Sprite):
-    def __init__(self, image=None, loc: list | tuple = (0, 0)):
+    def __init__(self, image=None, loc: list | tuple | Vector2 = (0, 0)):
         super().__init__()
         log_func(f"Creating Sprite {self.__class__.__name__} on {loc}", )
         if image is None:
@@ -95,7 +100,7 @@ class BaseSprite(pg.sprite.Sprite):
             self.loc += Vector2(x, y)
             self.transform_location()
 
-    def set_align(self, align: Align):
+    def set_align(self, align: Align):  # 设置对齐
         self.align = align
         self.transform_location()
 

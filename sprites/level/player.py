@@ -1,19 +1,17 @@
 from time import perf_counter
 
+import pygame as pg
 from PIL import Image
 
+from engine import resource as rs
 from engine.asset_parser import image2surface, surface2image
 from engine.sound import play_sound
 from lib.config import gm_config
 from lib.define import *
 from lib.public_data import public
 from sprites.base.animation_sprite import AnimationSprite
-from engine import resource as rs
-
-import pygame as pg
-
 from sprites.base.base_sprite import Align
-from sprites.level.elements.level_element import Bombs
+from sprites.level.elements.level_element import Bomb
 
 
 class Player(AnimationSprite):
@@ -29,19 +27,20 @@ class Player(AnimationSprite):
             2: (pg.K_UP, pg.K_LEFT, pg.K_RIGHT),
             3: (pg.K_i, pg.K_j, pg.K_l),
         }
+        self.translate_lock = False
         self.layer_def = LAYER_PLAY
         super().__init__(tuple(loc))
         self.set_align(Align.CENTER)
         rs_player = rs_map[player_id]
         self.box = rs_player.box
         self.add_animation(rs_player.stand, "stand", 12)
-        self.add_animation(rs_player.run, "run", 20)
+        self.add_animation(rs_player.run, "run", 24)
         self.add_animation(rs_player.die, "die", 20)
         self.add_animation(rs_player.jump, "jump", 24)
 
         self.Vy = 0
-        self.x = self.rect.topleft[0]
-        self.y = self.rect.topleft[1]
+        self.x = self.loc.x
+        self.y = self.loc.y
         self.k_jump, self.k_left, self.k_right = keys_map[player_id]
         self.jump_lock = False
         self.next_jump = False
@@ -50,8 +49,9 @@ class Player(AnimationSprite):
         self.self_group = pg.sprite.Group()
         # noinspection PyTypeChecker
         self.self_group.add(self)
-        self.last_pos_update = perf_counter()
-        self.frame_time = 1 / 60
+        self.last_pos_calc = self.last_pos_update = perf_counter()
+        self.calc_frame_time = 1 / 60
+        self.show_frame_time = 1 / 28 if gm_config.sim_player_fps else 1 / 60
         self.play_animation("stand")
 
     def event_parse(self, event: int, data):
@@ -88,28 +88,31 @@ class Player(AnimationSprite):
 
     @property
     def collide(self):
-        return pg.sprite.groupcollide(public.sm.level_manager.floor, self.self_group, False, False) or \
-            pg.sprite.groupcollide(public.sm.level_manager.edges, self.self_group, False, False)
+        return pg.sprite.groupcollide(public.level_manager.floor, self.self_group, False, False) or \
+            pg.sprite.groupcollide(public.level_manager.edges, self.self_group, False, False)
 
     def update(self):
-        if perf_counter() - self.last_pos_update > self.frame_time and self.enable:
+        if perf_counter() - self.last_pos_calc > self.calc_frame_time and self.enable:
+            delta = self.calc_frame_time
+            last_loc = self.loc.copy
             self.saved_rect = self.rect.copy()
             self.rect = self.box.get_rect()
             self.rect.center = self.loc.tuple
 
             self.move(y=self.Vy)
 
-            self.Vy -= G
-            if self.Vy + G != 0:
-                if self.Vy + G > 0:
+            off_G = round(G * delta, 2)
+            self.Vy -= off_G
+            if self.Vy + off_G != 0:
+                if self.Vy + off_G > 0:
                     if self.collide:
                         while self.collide:
-                            self.move(y=-G)
+                            self.move(y=-off_G)
                         self.Vy = 0
-                if self.Vy + G < 0:
+                if self.Vy + off_G < 0:
                     if self.collide:
                         while self.collide:
-                            self.move(y=G)
+                            self.move(y=off_G)
                         self.jump_lock = False
                         self.Vy = 0
                     else:
@@ -131,21 +134,20 @@ class Player(AnimationSprite):
             # 移动逻辑
             if key_map[self.k_left]:
                 self.dir = "left"
-                self.move(x=-5.2)
+                self.move(x=-PLAYER_MOVE_SPEED)
                 while self.collide:
                     self.move(x=1)
                 if not self.jump_lock:
                     self.play_animation("run")
-            else:
-                if key_map[self.k_right]:
-                    self.dir = "right"
-                    self.move(x=5.2)
-                    while self.collide:
-                        self.move(x=-1)
-                    if not self.jump_lock:
-                        self.play_animation("run")
-                elif not self.jump_lock:
-                    self.play_animation("stand")
+            elif key_map[self.k_right]:
+                self.dir = "right"
+                self.move(x=PLAYER_MOVE_SPEED)
+                while self.collide:
+                    self.move(x=-1)
+                if not self.jump_lock:
+                    self.play_animation("run")
+            elif not self.jump_lock:
+                self.play_animation("stand")
 
             # 吃金豆判断
             beans = pg.sprite.groupcollide(public.sm.level_manager.beans, self.self_group, False, False)
@@ -156,18 +158,21 @@ class Player(AnimationSprite):
             kills = pg.sprite.groupcollide(public.sm.level_manager.kills, self.self_group, False, False)
             if kills:
                 for sprite in kills:
-                    if isinstance(sprite, Bombs):
-                        sprite.killed()
+                    if isinstance(sprite, Bomb):
+                        sprite.boom_plus_kill()
                 self.play_animation("die", end_stop=True)
+                self.set_align(Align.TOPLEFT)
                 self.enable = False
                 play_sound(rs.sound.die)
                 public.level_manager.left_players -= 1
                 if public.level_manager.left_players <= 0:
                     public.send_event(EVENT_LEVEL_END, LEVEL_END_LOSE)
 
-            self.last_pos_update = perf_counter()
+            self.last_pos_calc = perf_counter()
             self.rect = self.saved_rect.copy()
-        if self.played_animation.startswith("die"):
-            self.set_align(Align.TOPLEFT)
+            if perf_counter() - self.last_pos_update > self.show_frame_time:
+                self.last_pos_update = perf_counter()
+            else:
+                self.loc = last_loc.copy
+            self.transform_location()
         super().update()
-

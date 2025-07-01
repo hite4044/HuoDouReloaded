@@ -1,3 +1,4 @@
+from lib.config import gm_config
 from lib.perf import Counter
 
 timer = Counter()  # 库导入计时器
@@ -33,12 +34,10 @@ rs.load_resources()
 timer.end("res")  # 资源加载计时器
 public.set_log_fuc(print)
 pg.display.set_icon(rs.icon)
-windll.user32.SetWindowPos(pg.display.get_wm_info()["window"], None, 365 - 7, 131, 0, 0, 0x0001 | 0x0004)
 buffer = ctypes.create_unicode_buffer("Adobe Flash Player 34")
 t_hwnd = windll.user32.FindWindowW(None, ctypes.byref(buffer))
-windll.user32.SetWindowPos(t_hwnd, None, 365 - 8, 131 - 20, 1050 + 16, 782 + 27, 0x0004)
-# 1036 743
-# 1052 782
+windll.user32.SetWindowPos(t_hwnd, None, 357, 131 - 20, 1050 + 16, 750 + 59, 0x0004)
+windll.user32.SetWindowPos(pg.display.get_wm_info()["window"], None, 357, 131, 0, 0, 0x0001 | 0x0004)
 timer.start("spr_create")  # 元素创建计时器
 logger.log("Creating Sprites...")
 sm = SpritesManager()
@@ -55,7 +54,7 @@ logger.log(f"Game Launch Use: {timer.endT('all')}")
 
 logger.finish()
 logger.render_now()
-move_target = sm.game_title
+public.move_target = sm.lose_cover_title
 clock = pg.time.Clock()
 pg.key.stop_text_input()
 st = perf_counter()
@@ -65,27 +64,35 @@ while True:
     for _event in _events:
         if _event.type == pg.QUIT:
             break
-        if _event.type == pg.KEYDOWN:
-            if _event.key == pg.K_UP:
-                move_target.target(0, -1)
-            elif _event.key == pg.K_DOWN:
-                move_target.target(0, 1)
-            elif _event.key == pg.K_RIGHT:
-                move_target.target(1, 0)
-            elif _event.key == pg.K_LEFT:
-                move_target.target(-1, 0)
-            elif _event.key == pg.K_KP_PLUS:
+        elif _event.type == pg.KEYDOWN:
+            if _event.key == pg.K_UP and public.move_target:
+                public.move_target.target(0, -1)
+            elif _event.key == pg.K_DOWN and public.move_target:
+                public.move_target.target(0, 1)
+            elif _event.key == pg.K_RIGHT and public.move_target:
+                public.move_target.target(1, 0)
+            elif _event.key == pg.K_LEFT and public.move_target:
+                public.move_target.target(-1, 0)
+            elif _event.key == pg.K_KP_PLUS and public.move_target:
                 sm.send_event(EVENT_REQ_CLONE, 0)
             elif _event.key == pg.K_KP0:
                 sm.send_event(EVENT_REQ_LEVEL_SAVE, 0)
-            elif _event.key == pg.K_DELETE:
+            elif _event.key == pg.K_DELETE and public.move_target:
                 sm.send_event(EVENT_REQ_DELETE, 0)
-            elif _event.key == pg.K_KP_ENTER:
-                print(move_target.loc)
+            elif _event.key == pg.K_KP_ENTER and public.move_target:
+                print(public.move_target.loc)
             elif _event.key == pg.K_p:
                 sm.send_event(EVENT_LEVEL_END, LEVEL_END_WIN)
             elif _event.key == pg.K_l:
                 print("FPS:", round(clock.get_fps(), 2))
+        elif _event.type == pg.MOUSEBUTTONDOWN:
+            if _event.button == pg.BUTTON_RIGHT:
+                mouse_pos = pg.mouse.get_pos()
+                for sprite in public.sprite_list:
+                    if sprite.show and sprite.rect.collidepoint(mouse_pos):
+                        public.move_target = sprite
+                        break
+                print(f"Select Sprite: {public.move_target.__class__.__name__}")
     else:
         pg.event.pump()
         screen.fill((255, 255, 255))
@@ -122,3 +129,4 @@ while True:
     break
 
 pg.quit()
+gm_config.save()

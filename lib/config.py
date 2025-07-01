@@ -5,12 +5,15 @@ from typing import Any, Callable
 
 class Config:
     play_sound: bool = False
-    use_cache: bool = False
+    use_cache: bool = True
+    sim: bool = False
+    sim_player_fps: bool = False
+    sim_bomb_fps: bool = False
 
     def __init__(self):
         self.cfg_fp = "data/config.json"
-        self.load()
         self.config_callbacks: dict[str, list[Callable]] = {}
+        self.load()
 
     def set_config(self, key: str, value: Any):
         setattr(self, key, value)
@@ -27,6 +30,8 @@ class Config:
             return
         with open(self.cfg_fp, "r") as f:
             self.__dict__.update(json.load(f))
+        if not self.sim:
+            self.sim_player_fps = False
 
     def save(self):
         print("保存游戏配置")

@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Callable, Any, Generator
 
 import pygame as pg
 
@@ -35,6 +35,11 @@ class PublicData:
 
         self.move_target: BaseSprite | None = None
 
+    @property
+    def sprite_list(self):
+        for layer in reversed(LAYERS):
+            for sprite in self.sprites[layer]:
+                yield sprite
 
     @property
     def level_manager(self):
@@ -57,7 +62,7 @@ class PublicData:
     def run_transition(self, take_id: int, callback=None, just_callback: bool = False):
         self.sprites_manager.transition.run_transition(take_id, callback, just_callback)
 
-    def send_event(self, event_id: int, data: Any):
+    def send_event(self, event_id: int, data: Any = None):
         self.sprites_manager.send_event(event_id, data)
 
 

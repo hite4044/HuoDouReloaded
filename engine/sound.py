@@ -10,9 +10,9 @@ sound_in_playing: list[tuple[float, int, pg.mixer.Sound]] = []
 def play_sound(sound: pg.mixer.Sound, loops: int = 0):
     if not gm_config.play_sound:
         sound.set_volume(0)
+    clear_stopped_sound()
     sound.play(loops)
     sound_in_playing.append((perf_counter(), loops, sound))
-    clear_stopped_sound()
 
 
 def clear_stopped_sound():

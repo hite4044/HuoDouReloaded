@@ -1,32 +1,43 @@
 from time import perf_counter
+from typing import Any
 
 import pygame as pg
 
 import engine.resource as rs
 from engine.sound import play_sound
+from lib.config import gm_config
 from lib.define import *
 from lib.public_data import public
-from sprites.base.base_sprite import BaseSprite, Vector2
+from sprites.base.base_sprite import BaseSprite, Vector2, Align
 from sprites.base.frame_sprite import FrameSprite
 
 
 class LevelElement(BaseSprite):
-    def __init__(self, image, sprite_data: dict):
+    def __init__(self, image, data: dict[str, Any]):
         self.layer_def = LAYER_PLAY
-        super().__init__(image, sprite_data["loc"])
-        self.sprite_data = sprite_data
+        super().__init__(image, data["loc"])
+        public.level_manager.elements.append(self)
+        self.sprite_data: dict[str, Any] = {}
+
         self.wait_action = False
         self.drag_lock = False
         self.drag_offset = (0, 0)
         self.last_click = perf_counter()
 
-    def get_sprite_data(self):
-        self.sprite_data["loc"] = self.loc
-        return self.sprite_data
+    @classmethod
+    def load(cls, data: dict[str, Any]):
+        p = data,
+        return cls(*p)
+
+    def save(self) -> dict:
+        return {"type": self.__class__.__name__, "loc": self.loc.list}
 
     def kill(self):
-        public.sm.level_manager.elements.remove(self)
+        public.level_manager.elements.remove(self)
         super().kill()
+
+    def on_change_state(self):
+        pass
 
     def update(self):
         if self.show:
@@ -42,7 +53,7 @@ class LevelElement(BaseSprite):
                         (not public.move_target.wait_action) and \
                         (not public.move_target.drag_lock):
                     self.wait_action = True
-                    move_target = self
+                    public.move_target = self
                     self.last_click = perf_counter()
 
                     x, y = pg.mouse.get_pos()
@@ -50,8 +61,7 @@ class LevelElement(BaseSprite):
                     self.drag_offset = (wx - x, wy - y)
             elif pg.mouse.get_pressed(3)[2]:
                 if self.rect.collidepoint(pg.mouse.get_pos()):
-                    if "state" in self.sprite_data:
-                        self.sprite_data["state"] = 0 if self.sprite_data["state"] else 1
+                    self.on_change_state()
             elif self.drag_lock:
                 self.drag_lock = False
 
@@ -59,51 +69,84 @@ class LevelElement(BaseSprite):
                 mouse_loc = pg.mouse.get_pos()
                 mouse_loc = (mouse_loc[0] + self.drag_offset[0], mouse_loc[1] + self.drag_offset[1])
                 self.rect.topleft = mouse_loc
-                self.loc = mouse_loc
+                self.loc = Vector2(mouse_loc)
+                self.transform_location()
         super().update()
 
 
 class Ground(LevelElement):
-    def __init__(self, sprite_data: dict):
-        if sprite_data["state"]:
-            super().__init__(rs.sprites.ground.v_normal, sprite_data)
-        else:
-            super().__init__(rs.sprites.ground.normal, sprite_data)
+    def __init__(self, data: dict[str, Any]):
+        self.IMAGE_MAP = {
+            0: rs.sprites.ground.normal,
+            1: rs.sprites.ground.v_normal,
+            2: rs.sprites.ground.long,
+        }
+        super().__init__(self.IMAGE_MAP[data["state"]], data)
+        public.level_manager.floor.add(self)
+        self.state: int = data["state"]
+
+    def save(self) -> dict:
+        data = super().save()
+        data["state"] = self.state
+        return data
 
 
 class Burr(LevelElement):
-    def __init__(self, sprite_data: dict):
-        if sprite_data["state"] == 0:
-            super().__init__(rs.sprites.burr.normal, sprite_data)
-        else:
-            super().__init__(rs.sprites.burr.reverse, sprite_data)
+    def __init__(self, data: dict[str, Any]):
+        self.IMAGE_MAP = {
+            0: rs.sprites.burr.normal,
+            1: rs.sprites.burr.reverse,
+        }
+        super().__init__(self.IMAGE_MAP[data["state"]], data)
+        public.level_manager.kills.add(self)
+        self.state: int = data["state"]
+
+    def save(self) -> dict:
+        data = super().save()
+        data["state"] = self.state
+        return data
+
+    def kill(self):
+        public.level_manager.kills.remove(self)
+        super().kill()
 
 
 class GoldenBean(LevelElement):
-    def __init__(self, sprite_data: dict):
-        super().__init__(rs.sprites.golden_bean.normal, sprite_data)
+    def __init__(self, data: dict[str, Any]):
+        super().__init__(rs.sprites.golden_bean.normal, data)
+        public.level_manager.beans.add(self)
 
     def eat(self):
         BeanEatAnimation(self.loc)
         self.kill()
 
-    # noinspection PyTypeChecker
     def kill(self):
         public.level_manager.beans.remove(self)
         super().kill()
 
 
 class Gun(LevelElement):
-    def __init__(self, sprite_data: dict):
-        if sprite_data["state"]:
-            super().__init__(rs.sprites.gun.left, sprite_data)
-        else:
-            super().__init__(rs.sprites.gun.right, sprite_data)
-        self.state: int = sprite_data["state"]
-        self.inv: float = sprite_data["inv"]
-        self.speed: float = sprite_data["speed"]
+    def __init__(self, data: dict[str, Any]):
+        self.IMAGE_MAP = {
+            0: rs.sprites.gun.left,
+            1: rs.sprites.gun.right
+        }
+        super().__init__(self.IMAGE_MAP[data["state"]], data)
+        self.state: int = data["state"]
+        self.inv: float = data["inv"]
+        self.use_new_speed: bool = data.get("use_new_speed", False)
+        self.speed: float = data["speed"] if self.use_new_speed else data["speed"] * 40  # pixel/s
         self.last_shoot: float = perf_counter()
         self.enable = True
+
+    def save(self) -> dict:
+        data = super().save()
+        data["state"] = self.state
+        data["inv"] = self.inv
+        data["speed"] = self.speed
+        if self.use_new_speed:
+            data["use_new_speed"] = True
+        return data
 
     def update(self):
         if perf_counter() - self.last_shoot > self.inv and self.enable:
@@ -118,24 +161,25 @@ class Gun(LevelElement):
 
     def shoot(self):
         if self.state:
-            new_loc = self.rect.topleft
+            bomb_loc = self.rect.topleft
         else:
-            new_loc = self.rect.topright
-        new_loc = (new_loc[0] - 42, new_loc[1] - 11)
-        bombs = Bombs(new_loc, int(self.speed))
-        public.level_manager.others.append(bombs)
-        # noinspection PyTypeChecker
-        public.level_manager.kills.add(bombs)
+            bomb_loc = self.rect.topright
+        bomb_loc = (bomb_loc[0] - 42, bomb_loc[1] - 11)
+        Bomb(bomb_loc, self.speed if self.state == 0 else -self.speed)
 
 
-class Bombs(BaseSprite):
+class Bomb(BaseSprite):
+    # 5 dis/s (swf speed) - 270 pixel/s
     def __init__(self, loc: tuple[int, int], speed: float):
         self.layer_def = LAYER_PLAY
         super().__init__(rs.sprites.bombs.normal, loc)
+        public.level_manager.bombs.append(self)
+        public.level_manager.kills.add(self)
         self.last_update = perf_counter()
         self.speed = speed
         self.enable = True
-        self.x: float = loc[0]
+        self.x: float = self.loc.x
+        self.frame_time = 1 / 24 if gm_config.sim_bomb_fps else 1 / 40
 
     def event_parse(self, event: int, data):
         if event == EVENT_LEVEL_END:
@@ -143,37 +187,40 @@ class Bombs(BaseSprite):
         super().event_parse(event, data)
 
     @property
-    def collide(self) -> bool:
+    def touch_border(self) -> bool:
         return any(
             [
-                self.rect.x > 1550,
-                self.rect.x < -500
+                self.loc.x > 1550,
+                self.loc.x < -500
             ]
         )
 
     def update(self):
-        if perf_counter() - self.last_update > 1 / 40 and self.enable:
-            self.x += self.speed
+        if perf_counter() - self.last_update > self.frame_time and self.enable:
+            self.last_update = perf_counter()
+            self.x += self.speed * self.frame_time
             self.loc.x = int(self.x)
             self.transform_location()
-            if self.collide:
+            self.rect.topleft = self.transformed_loc
+            if self.touch_border:
                 self.kill()
-            self.last_update = perf_counter()
         super().update()
 
-    def killed(self):
+    def boom_plus_kill(self):
         BombBoomAnimation(self.rect.topleft)
         self.kill()
 
     def kill(self):
-        public.level_manager.others.remove(self)
+        public.level_manager.bombs.remove(self)
+        public.level_manager.kills.remove(self)
         super().kill()
 
 
 class XKill(LevelElement):
     def __init__(self, sprite_data: dict):
         super().__init__(rs.sprites.x_kill.frames[0], sprite_data)
-        self.rect.center = self.loc
+        public.level_manager.kills.add(self)
+        self.set_align(Align.CENTER)
         self.start = min(sprite_data["start"], sprite_data["stop"])
         self.stop = max(sprite_data["start"], sprite_data["stop"])
         self.speed = sprite_data["speed"]
@@ -183,8 +230,13 @@ class XKill(LevelElement):
         self.frame_index = 0
         self.frames = rs.sprites.x_kill.frames
 
-    def renew_loc(self, new_loc: list[int]):
-        self.rect.center = tuple(new_loc)
+    def save(self) -> dict:
+        data = super().save()
+        data["start"] = self.start
+        data["stop"] = self.stop
+        data["speed"] = self.speed
+        data["dir"] = self.dir
+        return data
 
     def update(self):
         if perf_counter() - self.last_update > self.frame_time:
@@ -192,24 +244,21 @@ class XKill(LevelElement):
                 self.frame_index = 0
             self.update_image(self.frames[self.frame_index])
 
-            new_loc = self.loc
             if not self.dir:
-                if new_loc[0] + self.speed > self.stop:
-                    new_loc = (self.stop, new_loc[1])
+                if self.loc.x + self.speed > self.stop:
+                    self.loc.x = self.stop
                     self.dir = 1
                 else:
-                    new_loc = (new_loc[0] + self.speed, new_loc[1])
+                    self.loc.x += self.speed
 
             else:
-                if new_loc[0] - self.speed < self.start:
-                    new_loc = (self.start, new_loc[1])
+                if self.loc.x - self.speed < self.start:
+                    self.loc.x = self.start
                     self.dir = 0
                 else:
-                    new_loc = (new_loc[0] - self.speed, new_loc[1])
-            self.loc = new_loc
+                    self.loc.x -= self.speed
 
-            self.rect = self.image.get_rect()
-            self.rect.center = self.loc
+            self.transform_location()
             self.frame_index += 1
             self.last_update = perf_counter()
         super().update()

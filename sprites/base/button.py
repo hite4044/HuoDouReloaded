@@ -9,7 +9,7 @@ from sprites.base.frame_sprite import FrameSprite
 
 
 class Button(FrameSprite):
-    def __init__(self, loc, shadow=True):
+    def __init__(self, loc, shadow=False):
         self.layer_def = LAYER_UI
         super().__init__(loc)
         self.set_align(Align.CENTER)
@@ -20,7 +20,7 @@ class Button(FrameSprite):
     def add_frame(self, frame: pg.surface.Surface):
         if self.shadow:
             render = ImageRender(frame.get_size(), surface2image(frame))
-            render.add_shadow(RenderShadowArgs(6, 2.5))
+            render.add_shadow(RenderShadowArgs(8, 2.4))
             frame = image2surface(render.image)
         super().add_frame(frame)
 
@@ -56,6 +56,7 @@ class CoverButton(Button):
     def __init__(self):
         super().__init__((0, 0))
         self.active_cover = None
+        self.should_follow = False
         self.cover_offset: Vector2 = Vector2(0, 0)
         self.show = False
         self.cover_map: dict[int, tuple[str, Vector2]] = {}
@@ -70,20 +71,25 @@ class CoverButton(Button):
             cover_path, self.cover_offset = self.cover_map[data]
             globals_vars = {"sm": public.sprites_manager}
             self.active_cover = eval(cover_path, globals_vars)
+            self.should_follow = True
         elif event == EVENT_LEVEL_RESET:
             self.show = False
             self.active_cover = None
-        elif event == EVENT_COVER_RUN:
+            self.should_follow = False
+        elif event == EVENT_COVER_EXIT:
             if self.active_cover:
                 self.show = False
                 self.active_cover.statics.append(self)
+                self.should_follow = False
+        elif event == EVENT_COVER_FINISH:
+            self.should_follow = False
 
     def transform_location(self):
         super().transform_location()
         self.rect.topleft = self.transformed_loc
 
     def update(self):
-        if self.active_cover:
+        if self.should_follow:
             self.loc = self.active_cover.loc + self.cover_offset
             self.transform_location()
             self.show = True

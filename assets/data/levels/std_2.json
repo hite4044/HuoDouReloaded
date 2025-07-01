@@ -1,0 +1,718 @@
+{
+  "players": {
+    "1": [
+      140,
+      690
+    ],
+    "2": [
+      60,
+      690
+    ],
+    "3": [
+      100,
+      690
+    ]
+  },
+  "bean_count": 12,
+  "name": "2",
+  "items": [
+    {
+      "type": "Gun",
+      "loc": [
+        -58,
+        589
+      ],
+      "state": 0,
+      "inv": 4,
+      "speed": 13.5
+    },
+    {
+      "type": "Gun",
+      "loc": [
+        -53,
+        107
+      ],
+      "state": 0,
+      "inv": 4,
+      "speed": 13.5
+    },
+    {
+      "type": "Gun",
+      "loc": [
+        1060,
+        689
+      ],
+      "state": 1,
+      "inv": 4,
+      "speed": 13.5
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        1020,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        -17,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        44,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        106,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        167,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        226,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        286,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        347,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        409,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        106,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        531,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        593,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        654,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        715,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        776,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        837,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        898,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        959,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        470,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        0,
+        627
+      ],
+      "state": 0
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        759,
+        380
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        471,
+        625
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        531,
+        625
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        592,
+        625
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        653,
+        625
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        920,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        122,
+        627
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        61,
+        627
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        183,
+        627
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        193,
+        527
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        254,
+        527
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        315,
+        527
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        -1,
+        326
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        494,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        555,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        555,
+        402
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        616,
+        402
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        616,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        678,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        737,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        920,
+        402
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        860,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        677,
+        380
+      ],
+      "state": 0
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        188,
+        256
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        799,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        799,
+        402
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        1001,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        860,
+        402
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        475,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        940,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        879,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        798,
+        201
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        658,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        597,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        536,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        414,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        352,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        290,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        229,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        168,
+        148
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        434,
+        426
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        392,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        331,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        718,
+        380
+      ],
+      "state": 0
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        229,
+        172
+      ],
+      "state": 1
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        270,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        121,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        121,
+        326
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        60,
+        326
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        60,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        -1,
+        302
+      ],
+      "state": 0
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        229,
+        256
+      ],
+      "state": 0
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        188,
+        172
+      ],
+      "state": 1
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        601,
+        103
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        151,
+        103
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        50,
+        236
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        339,
+        219
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        936,
+        620
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        963,
+        214
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        855,
+        118
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        554,
+        326
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        570,
+        536
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        270,
+        435
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        60,
+        551
+      ]
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        340,
+        649
+      ]
+    }
+  ]
+}

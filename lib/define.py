@@ -7,9 +7,13 @@ EVENT_REQ_DELETE = 0x05  # 请求关卡编辑器删除选中的对象
 EVENT_LEVEL_ENTER = 0x06  # 玩家进入关卡
 EVENT_LEVEL_RESET = 0x07  # 玩家重置关卡
 EVENT_LEVEL_EXIT = 0x08  # 玩家退出关卡
-EVENT_LEVEL_END = 0x09  # 玩家完成关卡：结局ID
-EVENT_COVER_RUN = 0x0A  # 结束界面开始滑动
+EVENT_LEVEL_END = 0x09  # 玩家完成关卡
+EVENT_COVER_FINISH = 0x0C # 结束界面结束进场滑动
+EVENT_COVER_EXIT = 0x0A  # 结束界面开始退场
 EVENT_LEVEL_NEXT = 0x0B  # 玩家进入下一个关卡
+EVENT_NAME_MAP: dict[int, str] = {
+    value: name for name, value in globals().items() if name.startswith("EVENT_") and isinstance(value, int)
+}
 
 # 关卡结局定义
 LEVEL_END_WIN = 0x00  # 玩家赢了
@@ -22,6 +26,9 @@ TAKE_START = 0x01  # 开始界面
 TAKE_PLAYERS_CHOOSE = 0x02  # 玩家选择界面
 TAKE_LEVEL_CHOOSE = 0x03  # 关卡选择界面
 TAKE_PLAY = 0x04  # 关卡游玩场景
+TAKE_NAME_MAP: dict[int, str] = {
+    value: name for name, value in globals().items() if name.startswith("TAKE_") and isinstance(value, int)
+}
 
 # 图层定义
 LAYER_HIDE = 0x00  # 位于背景下，永远不可见
@@ -48,13 +55,13 @@ SHOW_PERF = True
 SPRITE_PERF = False
 
 # 启用关卡编辑 (None)
-LEVEL_EDIT = True
+LEVEL_EDIT = False
 
 # 可否移动界面元素 (None)
 ELE_EDIT = True
 
 # 加载时在窗口显示日志 (high)
-LOADING_LOG = True
+LOADING_LOG = False
 
 # 渲染加载日志时帧数
 LOADING_FPS = 30
@@ -66,7 +73,10 @@ GAME_SCALE = 1.5
 OLD_ANIMATION = False
 
 # 玩家重力加速度
-G = 0.4
+G = 0.4 * 60
+
+# 玩家移动速度
+PLAYER_MOVE_SPEED = 270 / 60
 
 # 目前游戏的版本
 VERSION = "beta 0.5"

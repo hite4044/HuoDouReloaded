@@ -3,6 +3,7 @@ from time import perf_counter
 import engine.resource as rs
 from engine.asset_parser import image2surface, surface2image
 from lib.define import *
+from lib.public_data import public
 from sprites.base.base_sprite import Vector2, BaseSprite
 
 
@@ -35,7 +36,7 @@ class Cover(BaseSprite):
                 self.show = True
                 self.y_in_move = True
                 self.last_update = 0
-        elif event == EVENT_COVER_RUN:
+        elif event == EVENT_COVER_EXIT:
             if data == self.msg:
                 self.x_in_move = True
                 self.last_update = 0
@@ -47,16 +48,18 @@ class Cover(BaseSprite):
             if self.loc.y + delta_y > self.stop_y:
                 self.loc.y = int(self.stop_y)
                 self.y_in_move = False
+                public.send_event(EVENT_COVER_FINISH, self.msg)
             else:
                 self.loc.y += delta_y
                 self.rect.topleft = self.loc.tuple
                 self.last_update = perf_counter()
+            self.transform_location()
         if self.x_in_move and perf_counter() - self.last_update > 0.02:
             if not self.static_cover:
                 image = surface2image(self.image)
                 for static in self.statics:
                     assert isinstance(static, BaseSprite)
-                    image.paste(surface2image(static.raw_image), static.rect.topleft)
+                    image.alpha_composite(surface2image(static.raw_image), static.rect.topleft)
                 self.static_cover = image2surface(image)
                 self.saved_cover = self.raw_image.copy()
             dx = self.target_x - self.loc.x
@@ -66,13 +69,13 @@ class Cover(BaseSprite):
                 self.loc.x = int(self.stop_x)
                 self.x_in_move = False
                 self.update_image(self.saved_cover)
-                sm.send_event(EVENT_LEVEL_NEXT, 0)
+                public.send_event(EVENT_LEVEL_NEXT)
             else:
                 self.rect.topleft = self.loc.tuple
-                self.static_cover.set_alpha(int(255 * (1050 - dx)))
+                self.static_cover.set_alpha(int(dx / 900 * 255))
                 self.update_image(self.static_cover)
                 self.last_update = perf_counter()
-
+            self.transform_location()
         super().update()
 
 

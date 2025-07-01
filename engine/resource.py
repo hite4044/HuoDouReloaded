@@ -4,6 +4,7 @@ from typing import Callable
 
 from engine.asset_parser import *
 from lib.define import *
+from lib.image_render import ImageRender, RenderTextArgs, RenderGrowArgs, RenderShadowArgs, RenderImageArgs
 
 
 class ReverseWay(Enum):
@@ -137,7 +138,8 @@ class Sprites:
         counter = GA("assets/sprites/golden_bean/counter.svg")
         # 从 100% 到 10% 大小
         eat_animation = AssetList(GA("assets/sprites/golden_bean/normal.svg",
-                            scale=GAME_SCALE * (size / 100)) for size in (list(range(100, 10, -8)) + [10, 10, 10]))
+                                     scale=GAME_SCALE * (size / 100)) for size in
+                                  (list(range(100, 10, -8)) + [10, 10, 10]))
 
     class Ground:
         normal = GA("assets/sprites/ground/normal.svg")
@@ -259,8 +261,8 @@ class Sprites:
     y_terrace = YTerrace()
 
 
-TBD_SIZE_UP = 41.5
-TBD_SIZE_DOWN = 37.5
+TBD_SIZE_UP = 42.5  # 41.5
+TBD_SIZE_DOWN = 38  # 37.5
 TBD_LOC_UP = (124, 37)
 TBD_LOC_DOWN = (112, 34)
 TBD_BG_UP = "assets/buttons/text_4/up.svg"
@@ -291,27 +293,29 @@ class Buttons:
                      text: str,
                      size_up: float = TBD_SIZE_UP, size_down: float = TBD_SIZE_DOWN,
                      loc_up: tuple[int, int] = TBD_LOC_UP, loc_down: tuple[int, int] = TBD_LOC_DOWN,
-                     bg_up: str = TBD_BG_UP,
-                     bg_down: str = TBD_BG_DOWN,
-                     scale: float = GAME_SCALE):
+                     bg_up: str = TBD_BG_UP, bg_down: str = TBD_BG_DOWN,
+                     scale: float = GAME_SCALE,
+                     use_shadow: bool = True):
             self.up = GA()
-            self.up.custom_load_func = lambda: self.get_text_button(bg_up, text, loc_up, size_up, scale)
+            self.up.custom_load_func = lambda: self.get_text_button(bg_up, text, loc_up, size_up, scale, use_shadow)
             self.down = GA()
             self.down.custom_load_func = lambda: self.get_text_button(bg_down, text, loc_down, size_down,
-                                                                      scale)
+                                                                      scale, use_shadow)
 
         @staticmethod
         def get_text_button(bg_path: str,
                             text: str,
                             loc: tuple[int, int],
                             font_size: float,
-                            scale: float):
+                            scale: float, use_shadow: bool):
             image = render_svg2image(bg_path, scale=scale)
-            render = OldImageRender(image.size, image)
-            render.add_text(text, font_size, image.size, "#FFCB00",
-                            True, 3, "#990000",
-                            text_loc=loc)
-            return image2surface(render.base)
+            render = ImageRender(image.size)
+            render.add_text(RenderTextArgs(text, font_size, "mm", loc))
+            render.add_grow(RenderGrowArgs(1, 0.8))
+            render.add_bg_image(RenderImageArgs(image))
+            if use_shadow:
+                render.add_shadow(RenderShadowArgs(8, 2.4))
+            return image2surface(render.image)
 
     class RelativeTextButton(TextButton):
         pass
@@ -321,24 +325,26 @@ class Buttons:
                      text: str,
                      size_up: float = TBD_SIZE_UP, size_down: float = TBD_SIZE_DOWN,
                      loc_up: tuple[int, int] = TBD_LOC_UP, loc_down: tuple[int, int] = TBD_LOC_DOWN,
-                     scale: float = GAME_SCALE) -> None:
+                     scale: float = GAME_SCALE,
+                     use_shadow: bool = True) -> None:
             super().__init__(text,
                              size_up, size_down,
                              loc_up, loc_down,
                              "assets/buttons/text_4/up.svg", "assets/buttons/text_4/down.svg",
-                             scale)
+                             scale, use_shadow)
 
     class Text2Button(TextButton):
         def __init__(self,
                      text: str,
                      size_up: float = TBD_SIZE_UP, size_down: float = TBD_SIZE_DOWN,
                      loc_up: tuple[int, int] = TBD_LOC_UP, loc_down: tuple[int, int] = TBD_LOC_DOWN,
-                     scale: float = GAME_SCALE) -> None:
+                     scale: float = GAME_SCALE,
+                     use_shadow: bool = True) -> None:
             super().__init__(text,
                              size_up, size_down,
                              loc_up, loc_down,
                              "assets/buttons/text_2/up.svg", "assets/buttons/text_2/down.svg",
-                             scale)
+                             scale, use_shadow=use_shadow)
 
     class NumberButton(TextButton):
         # noinspection PyDefaultArgument
@@ -377,11 +383,11 @@ class Buttons:
 
     class PlayersOK(Text2Button):
         def __init__(self):
-            super().__init__("确 定", loc_up=(95, 35), loc_down=(85, 32))
+            super().__init__("确 定", loc_up=(95, 37), loc_down=(85, 33), use_shadow=False)
 
     class Return(Text2Button):
         def __init__(self):
-            super().__init__("返 回", loc_up=(95, 35), loc_down=(85, 32))
+            super().__init__("返 回", loc_up=(95, 37), loc_down=(85, 34))
 
     class ReturnChoose(Text4Button):
         def __init__(self):

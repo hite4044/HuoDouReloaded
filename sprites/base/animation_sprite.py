@@ -32,9 +32,6 @@ class AnimationSprite(FrameSprite):
             self.last_update = perf_counter() - self.ani_frame_time
             self.end_stop = end_stop
 
-    def switch_frame(self, index: int):
-        super().switch_frame(index)
-
     def update(self):
         if self.show and self.played_animation and self.animation_index != -1:
             if perf_counter() - self.last_update > self.ani_frame_time:
