@@ -117,5 +117,6 @@ class BaseSprite(pg.sprite.Sprite):
             public.screen.blit(self.raw_image, self.transformed_loc)
 
     def kill(self):  # 删除精灵
+        log_func(f"Remove Sprite {self.__class__.__name__}")
         sprites[self.layer].remove(self)
         super().kill()

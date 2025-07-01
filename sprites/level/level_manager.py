@@ -143,8 +143,7 @@ class LevelManager(BaseSprite):
         sprite_data = public.move_target.save()
         log_func(f"Clone Sprite on {sprite_data['loc']}:", self.__class__.__name__)
         # noinspection PyArgumentList
-        sprite = public.move_target.__class__(deepcopy(sprite_data))
-        self.elements.append(sprite)
+        public.move_target.__class__(deepcopy(sprite_data))
 
     def load_level(self, level_index: int):
         self.level_index = level_index
@@ -152,7 +151,6 @@ class LevelManager(BaseSprite):
         self.golden_bean = 0
 
         level_data = self.level_datas[level_index]
-        print(level_data.bean_count)
         self.golden_bean_all = level_data.bean_count
         classes = {name: getattr(level_element_lib, name) for name in dir(level_element_lib)}
         for sprite_data in level_data.items:
