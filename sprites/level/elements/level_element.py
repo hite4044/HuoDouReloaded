@@ -128,8 +128,8 @@ class GoldenBean(LevelElement):
 class Gun(LevelElement):
     def __init__(self, data: dict[str, Any]):
         self.IMAGE_MAP = {
-            0: rs.sprites.gun.left,
-            1: rs.sprites.gun.right
+            0: rs.sprites.gun.right,
+            1: rs.sprites.gun.left
         }
         super().__init__(self.IMAGE_MAP[data["state"]], data)
         self.state: int = data["state"]
@@ -143,9 +143,11 @@ class Gun(LevelElement):
         data = super().save()
         data["state"] = self.state
         data["inv"] = self.inv
-        data["speed"] = self.speed
         if self.use_new_speed:
+            data["speed"] = self.speed
             data["use_new_speed"] = True
+        else:
+            data["speed"] = self.sprite_data["speed"]
         return data
 
     def update(self):
@@ -160,11 +162,13 @@ class Gun(LevelElement):
         super().event_parse(event, data)
 
     def shoot(self):
-        if self.state:
+        self.rect.topleft = self.loc.tuple
+        if self.state:  # 向左
             bomb_loc = self.rect.topleft
-        else:
+            bomb_loc = (bomb_loc[0] - 42, bomb_loc[1] - 11)
+        else:  # 向右
             bomb_loc = self.rect.topright
-        bomb_loc = (bomb_loc[0] - 42, bomb_loc[1] - 11)
+            bomb_loc = (bomb_loc[0] + 27, bomb_loc[1] - 11)
         Bomb(bomb_loc, self.speed if self.state == 0 else -self.speed)
 
 
@@ -232,6 +236,7 @@ class XKill(LevelElement):
 
     def save(self) -> dict:
         data = super().save()
+        data["loc"] = self.sprite_data["loc"]
         data["start"] = self.start
         data["stop"] = self.stop
         data["speed"] = self.speed

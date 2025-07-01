@@ -8,9 +8,10 @@ EVENT_LEVEL_ENTER = 0x06  # 玩家进入关卡
 EVENT_LEVEL_RESET = 0x07  # 玩家重置关卡
 EVENT_LEVEL_EXIT = 0x08  # 玩家退出关卡
 EVENT_LEVEL_END = 0x09  # 玩家完成关卡
-EVENT_COVER_FINISH = 0x0C # 结束界面结束进场滑动
-EVENT_COVER_EXIT = 0x0A  # 结束界面开始退场
-EVENT_LEVEL_NEXT = 0x0B  # 玩家进入下一个关卡
+EVENT_COVER_FINISH = 0x0A # 结束界面结束进场滑动
+EVENT_COVER_EXIT = 0x0B  # 结束界面开始退场
+EVENT_LEVEL_NEXT = 0x0C  # 玩家进入下一个关卡
+EVENT_REQ_RELOAD_LEVEL = 0x0D
 EVENT_NAME_MAP: dict[int, str] = {
     value: name for name, value in globals().items() if name.startswith("EVENT_") and isinstance(value, int)
 }

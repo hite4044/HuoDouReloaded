@@ -1,4 +1,6 @@
 {
+  "name": "2",
+  "bean_count": 12,
   "players": {
     "1": [
       140,
@@ -13,8 +15,6 @@
       690
     ]
   },
-  "bean_count": 12,
-  "name": "2",
   "items": [
     {
       "type": "Gun",

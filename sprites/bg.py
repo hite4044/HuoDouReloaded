@@ -23,3 +23,4 @@ class BackGround(FrameSprite):
             elif data == TAKE_PLAY:
                 self.switch_frame(2)
                 self.loc += Vector2(-2, 0)
+            self.transform_location()

@@ -74,11 +74,13 @@ while True:
             elif _event.key == pg.K_LEFT and public.move_target:
                 public.move_target.target(-1, 0)
             elif _event.key == pg.K_KP_PLUS and public.move_target:
-                sm.send_event(EVENT_REQ_CLONE, 0)
+                sm.send_event(EVENT_REQ_CLONE)
             elif _event.key == pg.K_KP0:
-                sm.send_event(EVENT_REQ_LEVEL_SAVE, 0)
+                sm.send_event(EVENT_REQ_LEVEL_SAVE)
+            elif _event.key == pg.K_r:
+                sm.send_event(EVENT_REQ_RELOAD_LEVEL)
             elif _event.key == pg.K_DELETE and public.move_target:
-                sm.send_event(EVENT_REQ_DELETE, 0)
+                sm.send_event(EVENT_REQ_DELETE)
             elif _event.key == pg.K_KP_ENTER and public.move_target:
                 print(public.move_target.loc)
             elif _event.key == pg.K_p:
@@ -104,7 +106,7 @@ while True:
                 if SHOW_PERF and SPRITE_PERF:
                     timer = perf_counter()
                     _sprite.update()
-                    time = ms(timer, perf_counter())
+                    time = (perf_counter() - timer) * 1000
                     if time > 0.01:
                         updates[time] = _sprite.__class__.__name__
                 else:

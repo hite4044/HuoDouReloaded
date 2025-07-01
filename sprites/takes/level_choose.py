@@ -1,3 +1,6 @@
+import json
+from os.path import isfile
+
 import pygame as pg
 
 import engine.resource as rs
@@ -70,12 +73,26 @@ class LevelsContainer(BaseSprite):
                 else:
                     _level = LevelEnter((x * 143, y * 138), 6 * y + x, self)
                 self.levels.append(_level)
+        self.data_fp = "data/unlock_levels.json"
+        self.load()
+
+    def load(self):
+        if not isfile(self.data_fp):
+            return
+        with open(self.data_fp) as f:
+            for unlock_level_index in json.load(f):
+                self.levels[unlock_level_index].set_lock(False)
+
+    def save(self):
+        with open(self.data_fp, "w") as f:
+            json.dump([level.level for level in self.levels if not level.lock], f)
 
     def unlock_level(self, level_name: str):
         for _level in self.levels:
             if _level.level == level_name:
                 _level.set_lock(False)
                 break
+        self.save()
 
     def event_parse(self, event: int, data):
         for _level in self.levels:

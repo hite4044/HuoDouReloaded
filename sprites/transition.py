@@ -50,7 +50,8 @@ class TransitionMask(FrameSprite):
                 if self.frame_index > 15:
                     if self.frame_index == 16:
                         if not self.just_callback:
-                            self.transition_now(self.transition_take)
+                            if self.transition_take != TAKE_EMPTY:
+                                self.transition_now(self.transition_take)
                         self.on_switch()
                     if self.frame_index > 30:
                         self.on_transition = False
