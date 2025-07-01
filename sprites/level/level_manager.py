@@ -81,8 +81,8 @@ class LevelManager(BaseSprite):
             level_names: list[str] = json.load(f)
         for level_file_name in level_names:
             with open(f"assets/data/levels/{level_file_name}") as f:
-                log_func(f"Load Level: {level_file_name}")
                 level_data = LevelData.load(json.load(f))
+                log_func(f"Load Level: {level_file_name} - {level_data.name}")
                 level_data.file_name = level_file_name
                 self.level_datas.append(level_data)
 
@@ -180,8 +180,8 @@ class LevelManager(BaseSprite):
         self.players.clear()
 
     def save_level(self):
-        log_func("Save Level", self.level_index)
         level_data = self.level_datas[self.level_index]
+        log_func("Save Level", level_data.name)
         content = json.dumps(level_data.save(self.elements), indent=4)
         with open(f"assets/data/levels/{level_data.file_name}", "w+") as f:
             f.write(content)
