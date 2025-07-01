@@ -34,7 +34,7 @@ class Config:
             self.sim_player_fps = False
 
     def save(self):
-        print("保存游戏配置")
+        print("Save Game Config")
         data = {key: getattr(self, key) for key in self.load_config_keys()}
         data_content = json.dumps(data)
         with open(self.cfg_fp, "w") as f:
