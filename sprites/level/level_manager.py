@@ -182,7 +182,7 @@ class LevelManager(BaseSprite):
     def save_level(self):
         level_data = self.level_datas[self.level_index]
         log_func("Save Level", level_data.name)
-        content = json.dumps(level_data.save(self.elements), indent=4)
+        content = json.dumps(level_data.save(self.elements), indent=2)
         with open(f"assets/data/levels/{level_data.file_name}", "w+") as f:
             f.write(content)
 
