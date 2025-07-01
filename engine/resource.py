@@ -437,13 +437,17 @@ def load_empty():
     surface.fill((255, 0, 255, 255))
     return surface.convert_alpha()
 
+def load_icon():
+    image = Image.open("assets/icon.png")
+    return image2surface(image.resize((64, 64)))
+
 
 bg = Background()
 sprites = Sprites()
 buttons = Buttons()
 sound = Sound()
 
-icon = GA("assets/icon.png")
+icon = GA(custom_load_func=load_icon)
 empty = GA(custom_load_func=load_empty)
 
 ALL_ASSETS = [bg, sprites, buttons, sound]
