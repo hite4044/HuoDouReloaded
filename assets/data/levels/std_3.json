@@ -25,6 +25,17 @@
             ]
         },
         {
+            "type": "Gun",
+            "loc": [
+                979,
+                665
+            ],
+            "state": 1,
+            "inv": 4,
+            "speed": 540.0,
+            "use_new_speed": true
+        },
+        {
             "type": "Burr",
             "loc": [
                 848,
@@ -918,13 +929,6 @@
             "loc": [
                 564,
                 260
-            ]
-        },
-        {
-            "type": "GoldenBean",
-            "loc": [
-                625,
-                89
             ]
         },
         {

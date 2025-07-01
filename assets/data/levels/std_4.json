@@ -25,6 +25,28 @@
             ]
         },
         {
+            "type": "Gun",
+            "loc": [
+                825,
+                397
+            ],
+            "state": 1,
+            "inv": 4,
+            "speed": 216.0,
+            "use_new_speed": true
+        },
+        {
+            "type": "Gun",
+            "loc": [
+                180,
+                397
+            ],
+            "state": 0,
+            "inv": 5,
+            "speed": 216.0,
+            "use_new_speed": true
+        },
+        {
             "type": "Burr",
             "loc": [
                 429,
@@ -57,7 +79,7 @@
             "start": 790,
             "stop": 1025,
             "speed": 3,
-            "dir": 1
+            "dir": 0
         },
         {
             "type": "XKill",
@@ -580,7 +602,7 @@
         {
             "type": "Ground",
             "loc": [
-                871,
+                870,
                 372
             ],
             "state": 1
