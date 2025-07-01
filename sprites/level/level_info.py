@@ -41,7 +41,7 @@ class LevelLevelNumber(OldTextSprite):
         if self.show:
             if self.last_level != public.level_manager.level_index:
                 render = OldImageRender((150, 50))
-                render.add_text(public.level_manager.level_index + 1, 33, (150, 50), text_color="#019901")
+                render.add_text(str(public.level_manager.level_index + 1), 33, (150, 50), text_color="#019901")
                 self.update_image(image2surface(render.base))
                 self.last_level = public.level_manager.level_index
         super().update()
