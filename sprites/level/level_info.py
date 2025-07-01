@@ -52,7 +52,8 @@ class BeanCounter(OldTextSprite):
         super().__init__(loc, f"0    / 11",
                          30.5, (150, 50), fill_color="#019901")
         self.show = False
-        self.last_beans = -2
+        self.last_beans = -1
+        self.last_all_beans = -1
 
     def event_parse(self, event: int, data):
         if event == EVENT_TAKE_CHANGE:
@@ -60,9 +61,11 @@ class BeanCounter(OldTextSprite):
 
     def update(self):
         if self.show:
-            if self.last_beans != public.level_manager.golden_bean:
+            if self.last_beans != public.level_manager.golden_bean or \
+                    self.last_all_beans != public.level_manager.golden_bean_all:
                 beans = public.level_manager.golden_bean
-                self.last_beans = beans + 1 - 1
+                self.last_beans = int(beans)
+                self.last_all_beans = int(public.level_manager.golden_bean_all)
                 render = OldImageRender((150, 50))
                 render.add_text(f"{beans}{'' if beans > 9 else '  '} / {public.level_manager.golden_bean_all}",
                                 30.5, (150, 50), text_color="#019901")

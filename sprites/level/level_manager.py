@@ -152,6 +152,7 @@ class LevelManager(BaseSprite):
         self.golden_bean = 0
 
         level_data = self.level_datas[level_index]
+        print(level_data.bean_count)
         self.golden_bean_all = level_data.bean_count
         classes = {name: getattr(level_element_lib, name) for name in dir(level_element_lib)}
         for sprite_data in level_data.items:
