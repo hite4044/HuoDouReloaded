@@ -80,4 +80,4 @@ G = 0.4 * 60
 PLAYER_MOVE_SPEED = 270 / 60
 
 # 目前游戏的版本
-VERSION = "beta 0.5"
+VERSION = "beta 1.0"
