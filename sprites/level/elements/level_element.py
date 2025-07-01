@@ -17,7 +17,7 @@ class LevelElement(BaseSprite):
         self.layer_def = LAYER_PLAY
         super().__init__(image, data["loc"])
         public.level_manager.elements.append(self)
-        self.sprite_data: dict[str, Any] = {}
+        self.sprite_data: dict[str, Any] = data
 
         self.wait_action = False
         self.drag_lock = False
