@@ -156,7 +156,7 @@ class Player(AnimationSprite):
 
             # 死亡逻辑
             kills = pg.sprite.groupcollide(public.sm.level_manager.kills, self.self_group, False, False)
-            if kills:
+            if kills and not public.ht_mode:
                 for sprite in kills:
                     if isinstance(sprite, Bomb):
                         sprite.boom_plus_kill()

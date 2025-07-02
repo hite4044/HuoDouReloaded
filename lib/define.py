@@ -12,6 +12,7 @@ EVENT_COVER_FINISH = 0x0A # 结束界面结束进场滑动
 EVENT_COVER_EXIT = 0x0B  # 结束界面开始退场
 EVENT_LEVEL_NEXT = 0x0C  # 玩家进入下一个关卡
 EVENT_REQ_RELOAD_LEVEL = 0x0D
+EVENT_SWITCH_HT_MODE = 0x0E
 EVENT_NAME_MAP: dict[int, str] = {
     value: name for name, value in globals().items() if name.startswith("EVENT_") and isinstance(value, int)
 }

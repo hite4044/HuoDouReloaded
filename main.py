@@ -85,6 +85,8 @@ while True:
                 print(public.move_target.loc)
             elif _event.key == pg.K_p:
                 sm.send_event(EVENT_LEVEL_END, LEVEL_END_WIN)
+            elif _event.key == pg.K_t:
+                sm.send_event(EVENT_SWITCH_HT_MODE)
             elif _event.key == pg.K_l:
                 print("FPS:", round(clock.get_fps(), 2))
         elif _event.type == pg.MOUSEBUTTONDOWN:

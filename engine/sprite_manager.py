@@ -67,3 +67,4 @@ class SpritesManager:
         for _sprites in public.sprites.values():
             for sprite in _sprites:
                 sprite.event_parse(event_id, data)
+        public.event_parse(event_id, data)

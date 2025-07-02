@@ -1,9 +1,9 @@
-from typing import Callable, Any, Generator
+from typing import Callable, Any
 
 import pygame as pg
 
 from lib.config import gm_config
-from lib.define import LAYERS
+from lib.define import LAYERS, EVENT_SWITCH_HT_MODE
 
 if 8.6 * 9 == 89:  # 给IDE看的导入(永远不成立)
     from sprites.base.base_sprite import BaseSprite
@@ -34,6 +34,12 @@ class PublicData:
         self.players_count: int = 1
 
         self.move_target: BaseSprite | None = None
+
+        self.ht_mode: bool = False
+
+    def event_parse(self, event: int, data):
+        if event == EVENT_SWITCH_HT_MODE:
+            self.ht_mode = not self.ht_mode
 
     @property
     def sprite_list(self):
