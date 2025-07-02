@@ -29,6 +29,10 @@ class LevelElement(BaseSprite):
         p = data,
         return cls(*p)
 
+    def target(self, x: int, y: int):
+        super().target(x, y)
+        self.rect.topleft = self.transformed_loc
+
     def save(self) -> dict:
         return {"type": self.__class__.__name__, "loc": self.loc.list}
 
