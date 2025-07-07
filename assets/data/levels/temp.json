@@ -1,0 +1,63 @@
+{
+  "id": "Standard Level 6",
+  "name": "Standard Level 6",
+  "bean_count": 12,
+  "players": {
+    "1": [
+      1004,
+      180
+    ],
+    "2": [
+      914,
+      180
+    ],
+    "3": [
+      960,
+      180
+    ]
+  },
+  "items": [
+    {
+      "type": "Gun",
+      "loc": [
+        0,
+        161
+      ],
+      "state": 0,
+      "inv": 4,
+      "speed": 540.0,
+      "use_new_speed": true
+    },
+    {
+      "type": "GoldenBean",
+      "loc": [
+        921,
+        634
+      ]
+    },
+    {
+      "type": "Burr",
+      "loc": [
+        631,
+        306
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        601,
+        726
+      ],
+      "state": 0
+    },
+    {
+      "type": "Ground",
+      "loc": [
+        524,
+        399
+      ],
+      "state": 1
+    }
+  ]
+}
