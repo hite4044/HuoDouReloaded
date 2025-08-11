@@ -32,7 +32,7 @@
 
 ### 注: 不是原游戏!
 
-![开始界面](<img width="1052" height="782" alt="image" src="https://github.com/user-attachments/assets/d9279a7c-644c-4ae2-90ef-b94d0b1e669c" />
-)
-![关卡界面](<img width="1052" height="782" alt="image" src="https://github.com/user-attachments/assets/c2ec1eb3-0201-47cd-b862-6b31d8536385" />
-)
+<img width="1052" height="782" alt="image" src="https://github.com/user-attachments/assets/d9279a7c-644c-4ae2-90ef-b94d0b1e669c" >
+
+<img width="1052" height="782" alt="image" src="https://github.com/user-attachments/assets/c2ec1eb3-0201-47cd-b862-6b31d8536385" >
+
