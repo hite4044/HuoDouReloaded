@@ -310,6 +310,8 @@ class Buttons:
                             scale: float, use_shadow: bool):
             image = render_svg2image(bg_path, scale=scale)
             render = ImageRender(image.size)
+            if OUTPUT_MODE:
+                render.output_layers = True
             render.add_text(RenderTextArgs(text, font_size, "mm", loc))
             render.add_grow(RenderGrowArgs(1, 0.8))
             render.add_bg_image(RenderImageArgs(image))

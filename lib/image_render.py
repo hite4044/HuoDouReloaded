@@ -1,13 +1,15 @@
 import hashlib
 from dataclasses import dataclass, asdict
 from math import ceil
-from os.path import isfile
+from os import makedirs
+from os.path import isfile, join
 from time import perf_counter
 from typing import Callable, Any
 
 from PIL import Image, ImageFilter, ImageOps
 from PIL import ImageDraw
 from PIL import ImageFont
+from PIL.Image import Resampling
 
 from engine.cache import mk_cache
 from lib.config import gm_config
@@ -39,7 +41,7 @@ class RenderTextArgs:
     text: str
     font_size: float = 48
     anchor: str | None = None
-    loc: tuple[int, int] | None = None
+    loc: tuple[float, float] | None = None
     color: str = "#FFCB00"
     spacing: int = 0
 
@@ -76,13 +78,14 @@ def task_func(func):
 class RenderLow:
     @staticmethod
     def render_text(image: Image.Image, args: RenderTextArgs):
-        draw = ImageDraw.Draw(image)
+        panel = Image.new("RGBA", image.size)
+        draw = ImageDraw.Draw(panel)
         font = ImageFont.truetype("assets/方正胖娃简体-CustomSpace.ttf", args.font_size)
         if args.loc is None:
             left, top, right, bottom = draw.textbbox((0, 0), args.text, font=font, anchor=args.anchor)
             args.loc = ((image.width - (right - left)) // 2, (image.height - (bottom - top)) // 2)  # 计算居中位置
         draw.text(args.loc, args.text, args.color, font=font, anchor=args.anchor, spacing=args.spacing)
-        return image
+        return panel
 
     @staticmethod
     def render_grow(image: Image.Image, args: RenderGrowArgs):
@@ -109,36 +112,48 @@ class ImageRender:
             self.base = Image.new("RGBA", size, (153, 0, 0, 0))
         self.render_tasks: list[tuple[Callable, Any]] = []
         self.last_task: tuple[Callable, Any] | None = None
+        self.layers: list[Image.Image] = []
+        self.output_layers = False
 
     @task_func
     def add_text(self, args: RenderTextArgs):
-        RenderLow.render_text(self.base, args)
+        text = RenderLow.render_text(self.base, args)
+        self.base.alpha_composite(text, (0, 0))
+        if self.output_layers:
+            self.layers.append(text.copy())
 
     @task_func
     def add_grow(self, args: RenderGrowArgs):
         grow = RenderLow.render_grow(self.base, args)
         grow.alpha_composite(self.base, (0, 0))
         self.base = grow
+        if self.output_layers:
+            self.layers.append(grow.copy())
 
     @task_func
     def add_shadow(self, args: RenderShadowArgs):
         shadow = RenderLow.render_shadow(self.base, args)
+        if self.output_layers:
+            self.layers.append(shadow.copy())
         shadow.alpha_composite(self.base, (ceil(args.blur * 2), 0))
         self.base = shadow
 
     @task_func
     def add_image(self, args: RenderImageArgs):
+        if self.output_layers:
+            self.layers.append(args.image.copy())
         self.base.paste(args.image, args.loc)
 
     @task_func
     def add_bg_image(self, args: RenderImageArgs):
+        if self.output_layers:
+            self.layers.append(args.image.copy())
         args.image.alpha_composite(self.base)
         self.base = args.image
 
     def get_tasks_hash(self):
-        timer = perf_counter()
         value = hashlib.md5(str(self.base.size).encode())
-        #print(perf_counter()-timer)
+        value.update(self.base.resize((1, 1), Resampling.BILINEAR).tobytes())
         for func, args in self.render_tasks:
             value.update(str(asdict(args)).encode("utf-8"))
         return value.hexdigest()
@@ -157,4 +172,9 @@ class ImageRender:
             self.last_task = None
             self.render_tasks.clear()
             self.base.save(cache_path)
+            if self.output_layers:
+                output_dir = mk_cache(tasks_hash)
+                makedirs(output_dir, exist_ok=True)
+                for i, layer in enumerate(self.layers):
+                    layer.save(join(output_dir, f"{i}.png"), format="PNG")
         return self.base

@@ -20,6 +20,8 @@ class Button(FrameSprite):
     def add_frame(self, frame: pg.surface.Surface):
         if self.shadow:
             render = ImageRender(frame.get_size(), surface2image(frame))
+            if OUTPUT_MODE:
+                render.output_layers = True
             render.add_shadow(RenderShadowArgs(8, 2.4))
             frame = image2surface(render.image)
         super().add_frame(frame)
