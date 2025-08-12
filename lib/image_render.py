@@ -109,7 +109,7 @@ class ImageRender:
         if base:
             self.base = base
         else:
-            self.base = Image.new("RGBA", size, (153, 0, 0, 0))
+            self.base = Image.new("RGBA", size, (255, 255, 255, 0))
         self.render_tasks: list[tuple[Callable, Any]] = []
         self.last_task: tuple[Callable, Any] | None = None
         self.layers: list[Image.Image] = []
