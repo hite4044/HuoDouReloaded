@@ -4,8 +4,9 @@ from os.path import isfile
 import pygame as pg
 
 import engine.resource as rs
-from engine.asset_parser import image2surface, surface2image, OldImageRender
+from engine.asset_parser import image2surface, surface2image
 from lib.define import *
+from lib.image_render import ImageRender, RenderTextArgs, RenderShadowArgs, RenderImageArgs
 from lib.public_data import public
 from sprites.base.base_sprite import BaseSprite
 from sprites.base.frame_sprite import FrameSprite
@@ -17,12 +18,13 @@ class LevelEnter(FrameSprite):
         super().__init__((loc[0] + parent.loc.x, loc[1] + parent.loc.y))
         self.level = level_index
         self.add_frame(rs.sprites.level.lock)
-        render = OldImageRender((60, 70))
-        render.add_text(str(level_index + 1), 50)
-        render.add_shadow(8, [0.4, 2.5], False, 2)
-        image = surface2image(rs.sprites.level.unlock)
-        image.paste(render.base, (22, 28), mask=render.base.split()[3])
-        self.add_frame(image2surface(image))
+
+        render = ImageRender((60, 70))
+        render.add_text(RenderTextArgs(str(level_index + 1), 50, loc=(26, 28)))
+        render.add_shadow(RenderShadowArgs(8, 2))
+        render.add_bg_image(RenderImageArgs(surface2image(rs.sprites.level.unlock)))
+
+        self.add_frame(image2surface(render.image))
 
         self.show = False
         self.press_lock = False
