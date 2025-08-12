@@ -2,9 +2,7 @@ from lib.define import *
 from lib.image_render import RenderTextArgs, RenderGrowArgs, RenderShadowArgs
 from lib.public_data import public
 from sprites.base.base_sprite import Align, Vector2
-from sprites.base.shadow import Shadow
-from sprites.base.text_sprite import TextSprite, OldTextSprite
-
+from sprites.base.text_sprite import TextSprite
 
 SPACE_MAP: dict[int, int] = {
     64: 0xE006,
@@ -15,6 +13,7 @@ SPACE_MAP: dict[int, int] = {
     2: 0xE001,
     1: 0xE000,
 }
+
 
 def space(size: int) -> str:
     space_string = ""
@@ -30,6 +29,7 @@ def space(size: int) -> str:
 
 def generate_space(string: str, size: int):
     return space(size).join(list(string))
+
 
 class GameTitle(TextSprite):
     def __init__(self, loc):
@@ -60,12 +60,15 @@ class PlayersChooseTitle(TextSprite):
             self.show = data == TAKE_PLAYERS_CHOOSE
 
 
-class LevelChooseTitle(OldTextSprite):
+class LevelChooseTitle(TextSprite):
     def __init__(self, loc):
-        super().__init__(loc, "选 择 关 卡", 75, (350, 120), True, outline=True)
-        self.set_align(Align.CENTER)
-        self.shadow = Shadow(self, 9, 2.5)
+        super().__init__(loc, (350, 120))
         self.show = False
+        self.set_align(Align.CENTER)
+        self.render.add_text(RenderTextArgs("选 择 关 卡", 75))
+        self.render.add_grow(RenderGrowArgs(width=2.1, blur=2))
+        self.render.add_shadow(RenderShadowArgs(blur=2.5, offset=9))
+        self.finish_render()
 
     def event_parse(self, event: int, data):
         if event == EVENT_TAKE_CHANGE:
@@ -89,8 +92,8 @@ class CoverTitle(TextSprite):
         self.cover = None
 
         line1, line2 = text.split("\n")
-        self.render.add_text(RenderTextArgs(line1, font_size, color=fill_color, loc = line1_loc))
-        self.render.add_text(RenderTextArgs(line2, font_size, color=fill_color, loc = line2_loc))
+        self.render.add_text(RenderTextArgs(line1, font_size, color=fill_color, loc=line1_loc))
+        self.render.add_text(RenderTextArgs(line2, font_size, color=fill_color, loc=line2_loc))
         self.render.add_grow(RenderGrowArgs(width=2, blur=2, color=outline_color))
         self.render.add_shadow(RenderShadowArgs(offset=7, blur=2))
         self.finish_render()
@@ -130,7 +133,7 @@ class WinCoverTitle(CoverTitle):
 
 
 class LoseCoverTitle(CoverTitle):
-    def __init__(self):#  
+    def __init__(self):  #
         super().__init__("真遗憾\n失败了！", 67, "#B5FEFF", "#0033FF",
                          end_msg=LEVEL_END_LOSE, cover_offset=(393, 136), cover="sm.lose_cover",
                          line1_loc=(28, 25),
