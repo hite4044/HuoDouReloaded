@@ -22,6 +22,7 @@ class LevelEnter(FrameSprite):
         render = ImageRender((100, 100))
         if OUTPUT_MODE:
             render.output_layers = True
+            render.output_name = str(level_index)
         render.add_text(RenderTextArgs(str(level_index + 1), 50, loc=(26, 28)))
         render.add_shadow(RenderShadowArgs(8, 2))
         render.add_bg_image(RenderImageArgs(surface2image(rs.sprites.level.unlock)))

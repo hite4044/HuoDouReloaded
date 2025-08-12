@@ -22,6 +22,7 @@ class Button(FrameSprite):
             render = ImageRender(frame.get_size(), surface2image(frame))
             if OUTPUT_MODE:
                 render.output_layers = True
+                render.output_name = f"{self.__class__.__name__}-{'Up' if len(self.frames) > 0 else 'Down'}"
             render.add_shadow(RenderShadowArgs(8, 2.4))
             frame = image2surface(render.image)
         super().add_frame(frame)

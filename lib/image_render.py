@@ -3,7 +3,6 @@ from dataclasses import dataclass, asdict
 from math import ceil
 from os import makedirs
 from os.path import isfile, join
-from time import perf_counter
 from typing import Callable, Any
 
 from PIL import Image, ImageFilter, ImageOps
@@ -12,7 +11,6 @@ from PIL import ImageFont
 from PIL.Image import Resampling
 
 from engine.cache import mk_cache
-from lib.config import gm_config
 from lib.public_data import public
 
 
@@ -114,6 +112,7 @@ class ImageRender:
         self.last_task: tuple[Callable, Any] | None = None
         self.layers: list[Image.Image] = []
         self.output_layers = False
+        self.output_name = ""
 
     @task_func
     def add_text(self, args: RenderTextArgs):
@@ -164,7 +163,7 @@ class ImageRender:
             tasks_hash = self.get_tasks_hash()
             cache_path = mk_cache(f"{tasks_hash}.png")
             if isfile(cache_path) and public.use_cache:
-                    return Image.open(cache_path)
+                return Image.open(cache_path)
             self.last_task = None
             for t_task_func, args in self.render_tasks:
                 t_task_func(self, args)
@@ -173,7 +172,7 @@ class ImageRender:
             self.render_tasks.clear()
             self.base.save(cache_path)
             if self.output_layers:
-                output_dir = mk_cache(tasks_hash)
+                output_dir = mk_cache((f"{self.output_name}-" if self.output_name else "") + tasks_hash)
                 makedirs(output_dir, exist_ok=True)
                 for i, layer in enumerate(self.layers):
                     layer.save(join(output_dir, f"{i}.png"), format="PNG")

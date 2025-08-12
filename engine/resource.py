@@ -297,21 +297,23 @@ class Buttons:
                      scale: float = GAME_SCALE,
                      use_shadow: bool = True):
             self.up = GA()
-            self.up.custom_load_func = lambda: self.get_text_button(bg_up, text, loc_up, size_up, scale, use_shadow)
+            self.up.custom_load_func = lambda: self.get_text_button(bg_up, text, loc_up, size_up, scale, use_shadow, True)
             self.down = GA()
             self.down.custom_load_func = lambda: self.get_text_button(bg_down, text, loc_down, size_down,
-                                                                      scale, use_shadow)
+                                                                      scale, use_shadow, False)
 
         @staticmethod
         def get_text_button(bg_path: str,
                             text: str,
                             loc: tuple[int, int],
                             font_size: float,
-                            scale: float, use_shadow: bool):
+                            scale: float, use_shadow: bool,
+                            up_or_down: bool = True):
             image = render_svg2image(bg_path, scale=scale)
             render = ImageRender(image.size)
             if OUTPUT_MODE:
                 render.output_layers = True
+                render.output_name = f"{text}-{'Up' if up_or_down else 'Down'}"
             render.add_text(RenderTextArgs(text, font_size, "mm", loc))
             render.add_grow(RenderGrowArgs(1, 0.8))
             render.add_bg_image(RenderImageArgs(image))
